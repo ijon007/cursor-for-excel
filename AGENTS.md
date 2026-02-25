@@ -27,5 +27,7 @@ This is **Cursor for Excel** — a Next.js 16 app with a split-pane interface: F
 ### Package Manager
 Use **bun** exclusively. Never use npm, yarn, or pnpm. The lockfile is `bun.lock`.
 
-### FortuneSheet CSS
-The FortuneSheet CSS (`@fortune-sheet/react/dist/index.css`) is imported inside the client component `components/spreadsheet.tsx`. It cannot be imported from a Server Component.
+### Gotchas
+- **Zod version**: Must use Zod v3 (`zod@3`), not v4. The AI SDK `tool()` function's TypeScript generics break with Zod v4 schemas.
+- **FortuneSheet CSS**: Imported inside client component `components/spreadsheet.tsx`. Cannot be imported from a Server Component.
+- **Model availability**: Gemini model names change frequently. If the current model (`gemini-2.5-flash`) becomes unavailable, list available models at `https://generativelanguage.googleapis.com/v1beta/models?key=$GOOGLE_GENERATIVE_AI_API_KEY` and update `app/api/agent/route.ts`.
