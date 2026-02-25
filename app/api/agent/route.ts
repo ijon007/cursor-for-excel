@@ -1,5 +1,5 @@
 import { google } from "@ai-sdk/google";
-import { streamText, tool, stepCountIs } from "ai";
+import { streamText, tool, stepCountIs, convertToModelMessages } from "ai";
 import { z } from "zod";
 
 function colLabel(c: number): string {
@@ -32,10 +32,12 @@ Column mapping: A=0, B=1, C=2, D=3, E=4, F=5, G=6, H=7, I=8, J=9, K=10, L=11, M=
 Current spreadsheet state:
 ${sheetSnapshot || "Empty spreadsheet — no data yet."}`;
 
+  const modelMessages = await convertToModelMessages(messages);
+
   const result = streamText({
-    model: google("gemini-2.0-flash"),
+    model: google("gemini-2.5-flash"),
     system: systemPrompt,
-    messages,
+    messages: modelMessages,
     stopWhen: stepCountIs(20),
     tools: {
       write_cell: tool({

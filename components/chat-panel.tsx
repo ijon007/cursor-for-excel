@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
 import {
   PaperPlaneTilt,
   UploadSimple,
@@ -182,8 +183,20 @@ export default function ChatPanel() {
 
   const activeSession = sessions.find((s) => s.id === activeSessionId);
 
+  const snapshotRef = useRef("");
+
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: "/api/agent",
+        body: () => ({ sheetSnapshot: snapshotRef.current }),
+      }),
+    []
+  );
+
   const { messages, sendMessage, status, setMessages } = useChat({
     id: activeSessionId,
+    transport,
     onError: (error) => {
       console.error("Chat error:", error);
     },
@@ -245,12 +258,8 @@ export default function ChatPanel() {
     async (text: string) => {
       if (!text.trim() || isLoading) return;
       setLocalInput("");
-      const snapshot = serializeSheetToString();
-      await sendMessage({
-        text: text.trim(),
-      }, {
-        body: { sheetSnapshot: snapshot },
-      });
+      snapshotRef.current = serializeSheetToString();
+      await sendMessage({ text: text.trim() });
     },
     [isLoading, sendMessage]
   );
