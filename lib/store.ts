@@ -1,9 +1,17 @@
 import { create } from "zustand";
 
-export interface ChatSession {
+export interface ToolCallStep {
   id: string;
-  title: string;
-  createdAt: number;
+  toolName: string;
+  description: string;
+  status: "running" | "completed" | "error";
+}
+
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  toolCalls?: ToolCallStep[];
 }
 
 export interface CellHighlight {
@@ -15,70 +23,69 @@ export interface CellHighlight {
   endCol: number;
 }
 
-function uid() {
-  return Math.random().toString(36).slice(2, 10);
-}
-
-const initialSessionId = uid();
-
 interface AppState {
-  sessions: ChatSession[];
-  activeSessionId: string;
+  messages: ChatMessage[];
+  isAgentLoading: boolean;
   highlightedCells: CellHighlight[];
+  activeSheetIndex: number;
 
-  createSession: () => string;
-  switchSession: (id: string) => void;
-  updateSessionTitle: (id: string, title: string) => void;
-  deleteSession: (id: string) => void;
+  addMessage: (msg: ChatMessage) => void;
+  updateMessage: (id: string, updates: Partial<ChatMessage>) => void;
+  addToolCallToMessage: (msgId: string, step: ToolCallStep) => void;
+  updateToolCallStatus: (
+    msgId: string,
+    stepId: string,
+    status: ToolCallStep["status"]
+  ) => void;
+  setAgentLoading: (loading: boolean) => void;
+  clearMessages: () => void;
 
   addHighlight: (h: CellHighlight) => void;
   removeHighlight: (id: string) => void;
+
+  setActiveSheetIndex: (index: number) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
-  sessions: [
-    { id: initialSessionId, title: "New Chat", createdAt: Date.now() },
-  ],
-  activeSessionId: initialSessionId,
+  messages: [],
+  isAgentLoading: false,
   highlightedCells: [],
+  activeSheetIndex: 0,
 
-  createSession: () => {
-    const id = uid();
+  addMessage: (msg) => set({ messages: [...get().messages, msg] }),
+
+  updateMessage: (id, updates) =>
     set({
-      sessions: [
-        { id, title: "New Chat", createdAt: Date.now() },
-        ...get().sessions,
-      ],
-      activeSessionId: id,
-    });
-    return id;
-  },
-
-  switchSession: (id) => set({ activeSessionId: id }),
-
-  updateSessionTitle: (id, title) =>
-    set({
-      sessions: get().sessions.map((s) =>
-        s.id === id ? { ...s, title } : s
+      messages: get().messages.map((m) =>
+        m.id === id ? { ...m, ...updates } : m
       ),
     }),
 
-  deleteSession: (id) => {
-    const remaining = get().sessions.filter((s) => s.id !== id);
-    if (remaining.length === 0) {
-      const newId = uid();
-      set({
-        sessions: [{ id: newId, title: "New Chat", createdAt: Date.now() }],
-        activeSessionId: newId,
-      });
-    } else {
-      set({
-        sessions: remaining,
-        activeSessionId:
-          get().activeSessionId === id ? remaining[0].id : get().activeSessionId,
-      });
-    }
-  },
+  addToolCallToMessage: (msgId, step) =>
+    set({
+      messages: get().messages.map((m) =>
+        m.id === msgId
+          ? { ...m, toolCalls: [...(m.toolCalls || []), step] }
+          : m
+      ),
+    }),
+
+  updateToolCallStatus: (msgId, stepId, status) =>
+    set({
+      messages: get().messages.map((m) =>
+        m.id === msgId
+          ? {
+              ...m,
+              toolCalls: m.toolCalls?.map((tc) =>
+                tc.id === stepId ? { ...tc, status } : tc
+              ),
+            }
+          : m
+      ),
+    }),
+
+  setAgentLoading: (loading) => set({ isAgentLoading: loading }),
+  clearMessages: () => set({ messages: [] }),
 
   addHighlight: (h) =>
     set({ highlightedCells: [...get().highlightedCells, h] }),
@@ -86,6 +93,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({
       highlightedCells: get().highlightedCells.filter((h) => h.id !== id),
     }),
+
+  setActiveSheetIndex: (index) => set({ activeSheetIndex: index }),
 }));
 
 // Module-level ref to the FortuneSheet Workbook imperative API
