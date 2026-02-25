@@ -124,3 +124,31 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* FortuneSheet integration */
+.fortune-sheet-container {
+  position: relative;
+}
+
+.fortune-sheet-container .fortune-sheet-container-wraper {
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Hide scrollbar for template buttons */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Smooth highlight animation for cells */
+@keyframes cell-highlight-fade {
+  0% {
+    background-color: oklch(0.85 0.13 181 / 30%);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
