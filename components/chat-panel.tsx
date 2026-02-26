@@ -17,7 +17,6 @@ import {
   CurrencyDollar,
   CalendarDots,
   Receipt,
-  Table as TableIcon,
   Chat as ChatIcon,
   ArrowCounterClockwise,
   MagnifyingGlass,
@@ -355,32 +354,25 @@ export default function ChatPanel() {
   return (
     <div className="flex flex-col h-full bg-card" data-print-hide>
       {/* Header */}
-      <div className="px-3 py-3 border-b border-border flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="size-7 rounded-md bg-primary flex items-center justify-center">
-            <TableIcon weight="bold" className="size-4 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="text-sm font-medium leading-none">Cursor for Excel</h1>
-            <p className="text-[0.625rem] text-muted-foreground mt-0.5">
-              AI spreadsheet
-              {tokenEstimate > 0 && (
-                <span className="ml-1 opacity-60">· ~{tokenEstimate.toLocaleString()} tokens</span>
-              )}
-            </p>
-          </div>
+      <div className="px-3 py-2 border-b border-border flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-medium">AI Chat</span>
+          {tokenEstimate > 0 && (
+            <span className="text-[0.625rem] text-muted-foreground opacity-60">· ~{tokenEstimate.toLocaleString()} tok</span>
+          )}
         </div>
-        <div className="flex gap-1">
-          <Button variant="outline" size="icon-sm" onClick={handlePrint} title="Print">
+        <div className="flex gap-0.5">
+          <Button variant="ghost" size="icon-xs" onClick={handlePrint} title="Print">
             <Printer weight="bold" />
           </Button>
-          <Button variant="outline" size="icon-sm" onClick={() => fileInputRef.current?.click()} title="Import .xlsx">
+          <Button variant="ghost" size="icon-xs" onClick={() => fileInputRef.current?.click()} title="Import .xlsx">
             <UploadSimple weight="bold" />
           </Button>
-          <Button variant="outline" size="icon-sm" onClick={exportXlsx} title="Export .xlsx">
+          <Button variant="ghost" size="icon-xs" onClick={exportXlsx} title="Export .xlsx">
             <DownloadSimple weight="bold" />
           </Button>
-          <Button variant="ghost" size="icon-sm" onClick={handleNewChat} title="New chat">
+          <div className="w-px h-4 bg-border mx-0.5" />
+          <Button variant="ghost" size="icon-xs" onClick={handleNewChat} title="New chat">
             <Plus weight="bold" />
           </Button>
         </div>

@@ -35,8 +35,10 @@ interface AppState {
   highlightedCells: CellHighlight[];
   isDarkMode: boolean;
   chatPanelWidth: number;
+  isSidebarOpen: boolean;
   charts: ChartConfig[];
   tokenEstimate: number;
+  expandedChartId: string | null;
 
   createSession: () => string;
   switchSession: (id: string) => void;
@@ -48,10 +50,12 @@ interface AppState {
 
   toggleDarkMode: () => void;
   setChatPanelWidth: (w: number) => void;
+  toggleSidebar: () => void;
 
   addChart: (chart: ChartConfig) => void;
   removeChart: (id: string) => void;
   clearCharts: () => void;
+  setExpandedChart: (id: string | null) => void;
 
   addTokens: (n: number) => void;
   resetTokens: () => void;
@@ -65,8 +69,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   highlightedCells: [],
   isDarkMode: false,
   chatPanelWidth: 380,
+  isSidebarOpen: true,
   charts: [],
   tokenEstimate: 0,
+  expandedChartId: null,
 
   createSession: () => {
     const id = uid();
@@ -123,12 +129,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ isDarkMode: next });
   },
 
-  setChatPanelWidth: (w) => set({ chatPanelWidth: Math.max(300, Math.min(600, w)) }),
+  setChatPanelWidth: (w) =>
+    set({ chatPanelWidth: Math.max(300, Math.min(600, w)) }),
+
+  toggleSidebar: () => set({ isSidebarOpen: !get().isSidebarOpen }),
 
   addChart: (chart) => set({ charts: [...get().charts, chart] }),
   removeChart: (id) =>
     set({ charts: get().charts.filter((c) => c.id !== id) }),
   clearCharts: () => set({ charts: [] }),
+  setExpandedChart: (id) => set({ expandedChartId: id }),
 
   addTokens: (n) => set({ tokenEstimate: get().tokenEstimate + n }),
   resetTokens: () => set({ tokenEstimate: 0 }),
