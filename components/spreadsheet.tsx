@@ -34,12 +34,10 @@ export default function Spreadsheet() {
     };
   }, []);
 
-  // Force FortuneSheet to recalculate layout when sidebar toggles or resizes
+  // Tell FortuneSheet to recalculate size when the container resizes
   useEffect(() => {
-    const timer = setTimeout(() => {
-      window.dispatchEvent(new Event("resize"));
-    }, 50);
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => window.dispatchEvent(new Event("resize")), 60);
+    return () => clearTimeout(t);
   }, [isSidebarOpen, chatPanelWidth]);
 
   const handleChange = useCallback(() => {}, []);
