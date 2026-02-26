@@ -19,17 +19,16 @@ function highlightCells(
   const api = getWorkbookApi();
   if (!api) return;
   const color = "#d4f5f0";
-  const range = [{ row: [startRow, endRow], column: [startCol, endCol] }];
-  try {
-    api.setCellFormatByRange("bg", color, range);
-  } catch {
-    /* ignore */
+  for (let r = startRow; r <= endRow; r++) {
+    for (let c = startCol; c <= endCol; c++) {
+      try { api.setCellFormat(r, c, "bg", color); } catch { /* */ }
+    }
   }
   setTimeout(() => {
-    try {
-      api.setCellFormatByRange("bg", undefined, range);
-    } catch {
-      /* ignore */
+    for (let r = startRow; r <= endRow; r++) {
+      for (let c = startCol; c <= endCol; c++) {
+        try { api.setCellFormat(r, c, "bg", undefined); } catch { /* */ }
+      }
     }
   }, 1500);
 }
@@ -97,15 +96,20 @@ export function executeToolOnClient(toolName: string, args: Record<string, any>)
       }
       case "format_cells": {
         const { startRow, startCol, endRow, endCol } = args;
-        const range = [
-          { row: [startRow, endRow], column: [startCol, endCol] },
-        ];
-        if (args.bold !== undefined)
-          api.setCellFormatByRange("bl", args.bold ? 1 : 0, range);
-        if (args.backgroundColor)
-          api.setCellFormatByRange("bg", args.backgroundColor, range);
-        if (args.textColor)
-          api.setCellFormatByRange("fc", args.textColor, range);
+        for (let r = startRow; r <= endRow; r++) {
+          for (let c = startCol; c <= endCol; c++) {
+            try {
+              if (args.bold !== undefined)
+                api.setCellFormat(r, c, "bl", args.bold ? 1 : 0);
+              if (args.backgroundColor)
+                api.setCellFormat(r, c, "bg", args.backgroundColor);
+              if (args.textColor)
+                api.setCellFormat(r, c, "fc", args.textColor);
+            } catch {
+              /* skip cells that don't exist yet */
+            }
+          }
+        }
         break;
       }
       case "insert_row": {
