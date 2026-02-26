@@ -181,11 +181,14 @@ function SessionDropdown({ onClose }: { onClose: () => void }) {
   return (
     <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg z-50 max-h-[240px] overflow-y-auto">
       {sessions.map((s) => (
-        <button
+        <div
           key={s.id}
+          role="button"
+          tabIndex={0}
           onClick={() => { switchSession(s.id); onClose(); }}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); switchSession(s.id); onClose(); } }}
           className={cn(
-            "w-full text-left px-3 py-2 text-xs/relaxed hover:bg-accent transition-colors flex items-center gap-2",
+            "w-full text-left px-3 py-2 text-xs/relaxed hover:bg-accent transition-colors flex items-center gap-2 cursor-pointer",
             s.id === activeSessionId && "bg-accent"
           )}
         >
@@ -193,13 +196,14 @@ function SessionDropdown({ onClose }: { onClose: () => void }) {
           <span className="truncate flex-1">{s.title}</span>
           {sessions.length > 1 && s.id !== activeSessionId && (
             <button
+              type="button"
               onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
               className="text-[0.625rem] text-muted-foreground hover:text-destructive shrink-0"
             >
               ×
             </button>
           )}
-        </button>
+        </div>
       ))}
     </div>
   );

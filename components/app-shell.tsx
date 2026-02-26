@@ -80,12 +80,10 @@ export default function AppShell() {
     toggleSidebar,
   } = useAppStore();
 
-  const handleResize = useCallback(
-    (delta: number) => {
-      setChatPanelWidth(chatPanelWidth + delta);
-    },
-    [chatPanelWidth, setChatPanelWidth]
-  );
+  const handleResize = useCallback((delta: number) => {
+    const current = useAppStore.getState().chatPanelWidth;
+    setChatPanelWidth(current + delta);
+  }, [setChatPanelWidth]);
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">
