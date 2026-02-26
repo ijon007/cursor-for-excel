@@ -62,13 +62,31 @@ export function executeToolOnClient(toolName: string, args: Record<string, any>)
       case "write_range": {
         const { startRow, startCol, values } = args;
         if (!values || values.length === 0) break;
-        const endRow = startRow + values.length - 1;
-        const endCol =
-          startCol + Math.max(...values.map((r: unknown[]) => r.length)) - 1;
-        api.setCellValuesByRange(values, {
-          row: [startRow, endRow],
-          column: [startCol, endCol],
+        const maxCols = Math.max(...values.map((r: unknown[]) => r?.length ?? 0));
+        if (maxCols === 0) break;
+        // Pad rows to uniform length so setCellValuesByRange doesn't crash
+        const padded = values.map((r: unknown[]) => {
+          const row = Array.isArray(r) ? [...r] : [];
+          while (row.length < maxCols) row.push(null);
+          return row;
         });
+        const endRow = startRow + padded.length - 1;
+        const endCol = startCol + maxCols - 1;
+        try {
+          api.setCellValuesByRange(padded, {
+            row: [startRow, endRow],
+            column: [startCol, endCol],
+          });
+        } catch {
+          // Fallback: write cell by cell
+          for (let r = 0; r < padded.length; r++) {
+            for (let c = 0; c < padded[r].length; c++) {
+              if (padded[r][c] != null) {
+                api.setCellValue(startRow + r, startCol + c, padded[r][c]);
+              }
+            }
+          }
+        }
         highlightCells(startRow, startCol, endRow, endCol);
         break;
       }
