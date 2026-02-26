@@ -426,14 +426,17 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────────
-   FortuneSheet — Dark mode overrides via CSS filter
+   FortuneSheet — Dark mode: invert only the cell grid area
+   The inner .fortune-sheet-container (direct child of .fortune-container)
+   holds the canvas-rendered cells and headers. Toolbar, formula bar,
+   sheet tabs, and context menus sit outside it and are themed via CSS
+   variables above — they must NOT be inverted.
    ────────────────────────────────────────────────────────────────────── */
-.dark .fortune-sheet-container {
+.dark .fortune-container > .fortune-sheet-container {
   filter: invert(0.92) hue-rotate(180deg);
 }
 
-.dark .fortune-sheet-container img,
-.dark .fortune-sheet-container canvas {
+.dark .fortune-container > .fortune-sheet-container img {
   filter: invert(1) hue-rotate(180deg);
 }
 
