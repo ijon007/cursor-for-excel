@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowsOut } from "@phosphor-icons/react";
 import {
   BarChart,
   Bar,
@@ -17,12 +18,15 @@ import {
   CartesianGrid,
   Legend,
 } from "recharts";
+import { useAppStore } from "@/lib/store";
+import { Button } from "@/components/ui/button";
 
 interface ChartData {
   type: "bar" | "line" | "pie" | "area";
   title: string;
   xLabels: string[];
   series: { name: string; values: number[] }[];
+  chartId?: string;
 }
 
 const COLORS = [
@@ -35,6 +39,8 @@ const COLORS = [
 ];
 
 export default function InlineChart({ data }: { data: ChartData }) {
+  const { setExpandedChart } = useAppStore();
+
   if (!data || !data.xLabels || !data.series) return null;
 
   const chartData = data.xLabels.map((label, i) => {
@@ -46,16 +52,22 @@ export default function InlineChart({ data }: { data: ChartData }) {
     return point;
   });
 
+  const handleExpand = () => {
+    if (data.chartId) {
+      setExpandedChart(data.chartId);
+    }
+  };
+
   const renderChart = () => {
     switch (data.type) {
       case "bar":
         return (
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-            <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-            <YAxis tick={{ fontSize: 10 }} />
-            <Tooltip contentStyle={{ fontSize: 11 }} />
-            <Legend wrapperStyle={{ fontSize: 10 }} />
+            <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+            <YAxis tick={{ fontSize: 9 }} />
+            <Tooltip contentStyle={{ fontSize: 10 }} />
+            <Legend wrapperStyle={{ fontSize: 9 }} />
             {data.series.map((s, i) => (
               <Bar key={s.name} dataKey={s.name} fill={COLORS[i % COLORS.length]} radius={[2, 2, 0, 0]} />
             ))}
@@ -65,10 +77,10 @@ export default function InlineChart({ data }: { data: ChartData }) {
         return (
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-            <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-            <YAxis tick={{ fontSize: 10 }} />
-            <Tooltip contentStyle={{ fontSize: 11 }} />
-            <Legend wrapperStyle={{ fontSize: 10 }} />
+            <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+            <YAxis tick={{ fontSize: 9 }} />
+            <Tooltip contentStyle={{ fontSize: 10 }} />
+            <Legend wrapperStyle={{ fontSize: 9 }} />
             {data.series.map((s, i) => (
               <Line key={s.name} dataKey={s.name} stroke={COLORS[i % COLORS.length]} strokeWidth={2} dot={{ r: 3 }} />
             ))}
@@ -78,10 +90,10 @@ export default function InlineChart({ data }: { data: ChartData }) {
         return (
           <AreaChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-            <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-            <YAxis tick={{ fontSize: 10 }} />
-            <Tooltip contentStyle={{ fontSize: 11 }} />
-            <Legend wrapperStyle={{ fontSize: 10 }} />
+            <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+            <YAxis tick={{ fontSize: 9 }} />
+            <Tooltip contentStyle={{ fontSize: 10 }} />
+            <Legend wrapperStyle={{ fontSize: 9 }} />
             {data.series.map((s, i) => (
               <Area key={s.name} dataKey={s.name} stroke={COLORS[i % COLORS.length]} fill={COLORS[i % COLORS.length]} fillOpacity={0.2} />
             ))}
@@ -94,12 +106,22 @@ export default function InlineChart({ data }: { data: ChartData }) {
         }));
         return (
           <PieChart>
-            <Pie data={pieData} cx="50%" cy="50%" outerRadius={60} dataKey="value" label={((props: { name?: string; percent?: number }) => `${props.name ?? ""} ${((props.percent ?? 0) * 100).toFixed(0)}%`) as never} labelLine={false} fontSize={9}>
+            <Pie
+              data={pieData}
+              cx="50%"
+              cy="50%"
+              outerRadius={55}
+              dataKey="value"
+              label={((props: { name?: string; percent?: number }) =>
+                `${props.name ?? ""} ${((props.percent ?? 0) * 100).toFixed(0)}%`) as never}
+              labelLine={false}
+              fontSize={8}
+            >
               {pieData.map((_, i) => (
                 <Cell key={i} fill={COLORS[i % COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip contentStyle={{ fontSize: 11 }} />
+            <Tooltip contentStyle={{ fontSize: 10 }} />
           </PieChart>
         );
       }
@@ -107,9 +129,22 @@ export default function InlineChart({ data }: { data: ChartData }) {
   };
 
   return (
-    <div className="my-2 rounded-md border border-border bg-background/50 p-2">
-      <p className="text-[0.625rem] font-medium mb-1 text-center">{data.title}</p>
-      <ResponsiveContainer width="100%" height={180}>
+    <div className="my-2 rounded-md border border-border bg-background/50 p-2 relative group">
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-[0.625rem] font-medium">{data.title}</p>
+        {data.chartId && (
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            className="opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={handleExpand}
+            title="Expand chart"
+          >
+            <ArrowsOut weight="bold" className="size-3" />
+          </Button>
+        )}
+      </div>
+      <ResponsiveContainer width="100%" height={170}>
         {renderChart()}
       </ResponsiveContainer>
     </div>

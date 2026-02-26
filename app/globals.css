@@ -153,43 +153,14 @@
   }
 }
 
-/* FortuneSheet dark mode overrides */
-.dark .fortune-sheet-container-wraper {
-  background-color: #1a1a1a !important;
+/* FortuneSheet dark mode — invert the entire spreadsheet and correct hue shift */
+.dark .fortune-sheet-container {
+  filter: invert(0.92) hue-rotate(180deg);
 }
-.dark .fortune-sheet-toolbar {
-  background-color: #222 !important;
-  border-color: #333 !important;
-}
-.dark .fortune-sheet-toolbar .fortune-sheet-toolbar-button {
-  color: #ccc !important;
-}
-.dark .fortune-sheet-input-box {
-  background-color: #222 !important;
-  color: #eee !important;
-  border-color: #333 !important;
-}
-.dark .fortune-sheet-input-box input {
-  color: #eee !important;
-}
-.dark .fortune-sheet-cell-area {
-  background-color: #1a1a1a !important;
-}
-.dark .fortune-sheet-header-area {
-  background-color: #222 !important;
-  color: #ccc !important;
-}
-.dark .fortune-sheet-bottom-area {
-  background-color: #1a1a1a !important;
-  border-color: #333 !important;
-}
-.dark .fortune-sheet-sheet-area {
-  background-color: #222 !important;
-  border-color: #333 !important;
-  color: #ccc !important;
-}
-.dark .fortune-sheet-sheet-area .fortune-sheet-sheet-button {
-  color: #ccc !important;
+/* Prevent images/charts inside the sheet from being double-inverted */
+.dark .fortune-sheet-container img,
+.dark .fortune-sheet-container canvas {
+  filter: invert(1) hue-rotate(180deg);
 }
 
 /* Print styles */

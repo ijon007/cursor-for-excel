@@ -7,11 +7,14 @@ import {
   Sun,
   ArrowCounterClockwise,
   ArrowClockwise,
+  SidebarSimple,
+  Sparkle,
 } from "@phosphor-icons/react";
 import ChatPanel from "@/components/chat-panel";
 import { useAppStore } from "@/lib/store";
 import { handleUndo, handleRedo } from "@/lib/tools";
 import { Button } from "@/components/ui/button";
+import ChartModal from "@/components/chart-modal";
 
 const Spreadsheet = dynamic(() => import("@/components/spreadsheet"), {
   ssr: false,
@@ -22,16 +25,13 @@ const Spreadsheet = dynamic(() => import("@/components/spreadsheet"), {
   ),
 });
 
-function ResizeHandle({
-  onResize,
-}: {
-  onResize: (delta: number) => void;
-}) {
+function ResizeHandle({ onResize }: { onResize: (delta: number) => void }) {
   const dragging = useRef(false);
   const startX = useRef(0);
 
   const onMouseDown = useCallback(
     (e: React.MouseEvent) => {
+      e.preventDefault();
       dragging.current = true;
       startX.current = e.clientX;
       const onMove = (ev: MouseEvent) => {
@@ -54,16 +54,23 @@ function ResizeHandle({
   return (
     <div
       onMouseDown={onMouseDown}
-      className="w-1 shrink-0 cursor-col-resize hover:bg-primary/20 active:bg-primary/30 transition-colors relative group"
+      className="w-1.5 shrink-0 cursor-col-resize hover:bg-primary/20 active:bg-primary/30 transition-colors relative group"
     >
       <div className="absolute inset-y-0 -left-1 -right-1" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-0.5 h-8 rounded-full bg-border group-hover:bg-primary/40 transition-colors" />
     </div>
   );
 }
 
 export default function AppShell() {
-  const { isDarkMode, toggleDarkMode, chatPanelWidth, setChatPanelWidth } =
-    useAppStore();
+  const {
+    isDarkMode,
+    toggleDarkMode,
+    chatPanelWidth,
+    setChatPanelWidth,
+    isSidebarOpen,
+    toggleSidebar,
+  } = useAppStore();
 
   const handleResize = useCallback(
     (delta: number) => {
@@ -73,12 +80,22 @@ export default function AppShell() {
   );
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden">
-      {/* Spreadsheet pane */}
-      <div className="flex-1 min-w-0 h-full relative">
-        <Spreadsheet />
-        {/* Floating toolbar */}
-        <div className="absolute top-1 right-2 z-10 flex gap-0.5 bg-card/80 backdrop-blur-sm rounded-md border border-border p-0.5 shadow-sm" data-print-hide>
+    <div className="flex flex-col h-screen w-screen overflow-hidden">
+      {/* ─── Top toolbar ────────────────────────────── */}
+      <div
+        className="h-9 shrink-0 border-b border-border bg-card flex items-center justify-between px-3 gap-2"
+        data-print-hide
+      >
+        {/* Left: app identity */}
+        <div className="flex items-center gap-2">
+          <div className="size-5 rounded bg-primary flex items-center justify-center">
+            <Sparkle weight="fill" className="size-3 text-primary-foreground" />
+          </div>
+          <span className="text-xs font-medium">Cursor for Excel</span>
+        </div>
+
+        {/* Center: undo / redo */}
+        <div className="flex items-center gap-0.5">
           <Button
             variant="ghost"
             size="icon-xs"
@@ -95,7 +112,10 @@ export default function AppShell() {
           >
             <ArrowClockwise weight="bold" />
           </Button>
-          <div className="w-px bg-border mx-0.5" />
+        </div>
+
+        {/* Right: dark mode + sidebar toggle */}
+        <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="icon-xs"
@@ -108,19 +128,40 @@ export default function AppShell() {
               <Moon weight="bold" />
             )}
           </Button>
+          <Button
+            variant={isSidebarOpen ? "ghost" : "outline"}
+            size="icon-xs"
+            onClick={toggleSidebar}
+            title={isSidebarOpen ? "Close AI panel" : "Open AI panel"}
+          >
+            <SidebarSimple weight="bold" />
+          </Button>
         </div>
       </div>
 
-      {/* Resize handle */}
-      <ResizeHandle onResize={handleResize} />
+      {/* ─── Main content ───────────────────────────── */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* Spreadsheet */}
+        <div className="flex-1 min-w-0 h-full">
+          <Spreadsheet />
+        </div>
 
-      {/* Chat pane */}
-      <div
-        className="h-full border-l border-border shrink-0"
-        style={{ width: chatPanelWidth }}
-      >
-        <ChatPanel />
+        {/* Resize handle + Chat panel */}
+        {isSidebarOpen && (
+          <>
+            <ResizeHandle onResize={handleResize} />
+            <div
+              className="h-full border-l border-border shrink-0"
+              style={{ width: chatPanelWidth }}
+            >
+              <ChatPanel />
+            </div>
+          </>
+        )}
       </div>
+
+      {/* Chart expand modal */}
+      <ChartModal />
     </div>
   );
 }
