@@ -130,8 +130,8 @@
   position: relative;
 }
 
-/* Hide the bottom stat bar (sheet tabs, zoom, etc.) */
-.fortune-sheet-container .fortune-stat-area {
+/* Hide the bottom stat bar (zoom, count, sum, etc.) */
+.fortune-sheet-container .fortune-container .fortune-stat-area {
   display: none !important;
 }
 
