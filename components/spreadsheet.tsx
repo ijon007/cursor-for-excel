@@ -55,8 +55,6 @@ export default function Spreadsheet() {
       setWorkbookApi(null);
       univerAPI.dispose();
     };
-    // Mount once; dark-mode and layout reactions are handled in dedicated effects.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
