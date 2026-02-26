@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { Workbook } from "@fortune-sheet/react";
 import "@fortune-sheet/react/dist/index.css";
-import { setWorkbookApi, useAppStore, getWorkbookApi } from "@/lib/store";
+import { setWorkbookApi, useAppStore } from "@/lib/store";
 import type { Sheet } from "@fortune-sheet/core";
 
 const defaultSheetData: Sheet[] = [
@@ -42,26 +42,25 @@ export default function Spreadsheet() {
   }, [isSidebarOpen, chatPanelWidth]);
 
   // Shift+Scroll: convert vertical wheel to horizontal scroll
+  const handleWheel = useCallback((e: WheelEvent) => {
+    if (e.shiftKey && e.deltaY !== 0) {
+      const scrollbarX = containerRef.current?.querySelector(
+        ".luckysheet-scrollbar-x"
+      ) as HTMLDivElement | null;
+      if (scrollbarX) {
+        e.preventDefault();
+        e.stopPropagation();
+        scrollbarX.scrollLeft += e.deltaY;
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const handler = (e: WheelEvent) => {
-      if (e.shiftKey && e.deltaY !== 0) {
-        const api = getWorkbookApi();
-        const scrollbarX = el.querySelector(
-          ".luckysheet-scrollbar-x"
-        ) as HTMLDivElement | null;
-        if (api && scrollbarX) {
-          e.preventDefault();
-          e.stopPropagation();
-          const newScroll = Math.max(0, scrollbarX.scrollLeft + e.deltaY);
-          api.scroll({ scrollLeft: newScroll });
-        }
-      }
-    };
-    el.addEventListener("wheel", handler, { capture: true });
-    return () => el.removeEventListener("wheel", handler, { capture: true });
-  }, []);
+    el.addEventListener("wheel", handleWheel, { capture: true });
+    return () => el.removeEventListener("wheel", handleWheel, { capture: true });
+  }, [handleWheel]);
 
   const handleChange = useCallback(() => {}, []);
 
