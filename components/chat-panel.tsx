@@ -19,6 +19,18 @@ import {
   Receipt,
   Table as TableIcon,
   Chat as ChatIcon,
+  ArrowCounterClockwise,
+  MagnifyingGlass,
+  ChartBar,
+  Lightning,
+  Buildings,
+  Calculator,
+  Users,
+  TrendUp,
+  Coins,
+  FileText,
+  Scales,
+  Printer,
 } from "@phosphor-icons/react";
 import { useAppStore } from "@/lib/store";
 import { executeToolOnClient, getToolDescription } from "@/lib/tools";
@@ -26,15 +38,37 @@ import { serializeSheetToString } from "@/lib/serialize-sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { importXlsx, exportXlsx } from "@/lib/file-io";
+import MarkdownContent from "@/components/markdown-content";
+import InlineChart from "@/components/inline-chart";
 import type { UIMessage } from "ai";
+
+// ─── Templates ────────────────────────────────────────────
 
 const TEMPLATES = [
   { label: "Monthly Budget", prompt: "Build a monthly budget tracker with 12 months of income and common expense categories. Include formulas for savings and totals.", icon: Wallet },
-  { label: "DCF Model", prompt: "Build a 5-year DCF (Discounted Cash Flow) model with revenue projections, costs, EBITDA, and free cash flow calculations.", icon: ChartLineUp },
-  { label: "P&L Statement", prompt: "Create a quarterly P&L (Profit & Loss) statement with revenue, COGS, operating expenses, and net income. Include FY totals.", icon: Receipt },
-  { label: "Cap Table", prompt: "Make a cap table showing founders, employee pool, and investor ownership with share counts and percentage calculations.", icon: CurrencyDollar },
-  { label: "Amortization", prompt: "Create a loan amortization schedule for a $250,000 loan at 5.5% annual rate over 30 years. Show first 12 monthly payments.", icon: CalendarDots },
+  { label: "DCF Model", prompt: "Build a 5-year DCF model with revenue projections, COGS, EBITDA, and free cash flow calculations.", icon: ChartLineUp },
+  { label: "P&L Statement", prompt: "Create a quarterly P&L statement with revenue, COGS, operating expenses, and net income. Include FY totals.", icon: Receipt },
+  { label: "Cap Table", prompt: "Make a cap table with founders, employee pool, and investor ownership with share counts and percentages.", icon: CurrencyDollar },
+  { label: "Amortization", prompt: "Create a loan amortization schedule for a $250,000 loan at 5.5% over 30 years. Show first 12 payments.", icon: CalendarDots },
+  { label: "Sales Forecast", prompt: "Build a 12-month sales forecast with 3 product lines, growth rates, and seasonal adjustments.", icon: TrendUp },
+  { label: "Balance Sheet", prompt: "Create a balance sheet with assets, liabilities, and equity sections. Include common line items and formulas.", icon: Scales },
+  { label: "Cash Flow", prompt: "Build a cash flow statement with operating, investing, and financing activities for 4 quarters.", icon: Coins },
+  { label: "Invoice", prompt: "Create a professional invoice template with company info, line items, subtotal, tax, and total.", icon: FileText },
+  { label: "KPI Dashboard", prompt: "Build a KPI dashboard with revenue, costs, margins, customer metrics, and month-over-month changes.", icon: ChartBar },
+  { label: "Break-Even", prompt: "Create a break-even analysis with fixed costs, variable costs per unit, selling price, and a break-even chart.", icon: Calculator },
+  { label: "Headcount Plan", prompt: "Build a headcount plan with departments, roles, salaries, start dates, and monthly/annual cost projections.", icon: Users },
+  { label: "Pricing Model", prompt: "Create a SaaS pricing calculator with tiers, user counts, feature comparison, and revenue projections.", icon: Buildings },
+  { label: "Unit Economics", prompt: "Build a unit economics model with CAC, LTV, payback period, churn rate, and margins.", icon: Lightning },
 ];
+
+const FOLLOW_UP_SUGGESTIONS = [
+  { label: "Add a chart", prompt: "Create a chart visualizing the key data in this spreadsheet." },
+  { label: "Format as currency", prompt: "Format all number cells as currency with $ sign and 2 decimal places." },
+  { label: "Add conditional formatting", prompt: "Apply conditional formatting to highlight the best and worst performing values." },
+  { label: "Explain formulas", prompt: "Explain what each formula in this spreadsheet does." },
+];
+
+// ─── Tool part helpers ────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function isToolPart(part: any): boolean {
@@ -44,11 +78,11 @@ function isToolPart(part: any): boolean {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getToolPartInfo(part: any): { toolName: string; args: any; state: string } | null {
+function getToolPartInfo(part: any): { toolName: string; args: any; state: string; output?: any } | null {
   if (!part || typeof part !== "object") return null;
   const t = part.type as string;
   if (t === "dynamic-tool") {
-    return { toolName: part.toolName, args: part.input, state: part.state };
+    return { toolName: part.toolName, args: part.input, state: part.state, output: part.output };
   }
   if (typeof t === "string" && t.startsWith("tool-")) {
     const toolInv = part.toolInvocation ?? part;
@@ -56,10 +90,13 @@ function getToolPartInfo(part: any): { toolName: string; args: any; state: strin
       toolName: toolInv.toolName ?? t.slice(5),
       args: toolInv.args ?? toolInv.input ?? {},
       state: toolInv.state ?? "output-available",
+      output: toolInv.output ?? toolInv.result,
     };
   }
   return null;
 }
+
+// ─── Sub-components ───────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function ToolCallItem({ part }: { part: any }) {
@@ -68,10 +105,16 @@ function ToolCallItem({ part }: { part: any }) {
 
   const done = info.state === "output-available" || info.state === "result";
   const errored = info.state === "output-error" || info.state === "error";
+
+  // Render inline chart for add_chart
+  if (info.toolName === "add_chart" && done && info.output) {
+    return <InlineChart data={info.output} />;
+  }
+
   const description = getToolDescription(info.toolName, info.args ?? {});
 
   return (
-    <div className="flex items-center gap-1.5 mt-1">
+    <div className="flex items-center gap-1.5 mt-0.5">
       {done ? (
         <CheckCircle weight="fill" className="size-3 text-primary shrink-0" />
       ) : errored ? (
@@ -79,20 +122,20 @@ function ToolCallItem({ part }: { part: any }) {
       ) : (
         <CircleNotch weight="bold" className="size-3 text-muted-foreground shrink-0 animate-spin" />
       )}
-      <span className="text-[0.625rem] text-muted-foreground truncate">{description}</span>
+      <span className="text-[0.625rem] text-muted-foreground truncate">
+        {description}
+      </span>
     </div>
   );
 }
 
 function MessageBubble({ message }: { message: UIMessage }) {
   const isUser = message.role === "user";
-
   const textParts = (message.parts ?? []).filter(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (p: any) => p.type === "text" && p.text
   );
   const toolParts = (message.parts ?? []).filter(isToolPart);
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const textContent = textParts.map((p: any) => p.text).join("");
 
@@ -113,37 +156,35 @@ function MessageBubble({ message }: { message: UIMessage }) {
             ))}
           </div>
         )}
-        {textContent && (
-          <p className="whitespace-pre-wrap">{textContent}</p>
-        )}
-        {!isUser && !textContent && toolParts.length === 0 && (
-          <div className="flex items-center gap-1.5">
-            <CircleNotch weight="bold" className="size-3 animate-spin text-muted-foreground" />
-            <span className="text-muted-foreground">Thinking...</span>
-          </div>
+        {textContent ? (
+          isUser ? (
+            <p className="whitespace-pre-wrap">{textContent}</p>
+          ) : (
+            <MarkdownContent content={textContent} />
+          )
+        ) : (
+          !isUser &&
+          toolParts.length === 0 && (
+            <div className="flex items-center gap-1.5">
+              <CircleNotch weight="bold" className="size-3 animate-spin text-muted-foreground" />
+              <span className="text-muted-foreground">Thinking...</span>
+            </div>
+          )
         )}
       </div>
     </div>
   );
 }
 
-function SessionDropdown({
-  onClose,
-}: {
-  onClose: () => void;
-}) {
-  const { sessions, activeSessionId, switchSession, deleteSession } =
-    useAppStore();
+function SessionDropdown({ onClose }: { onClose: () => void }) {
+  const { sessions, activeSessionId, switchSession, deleteSession } = useAppStore();
 
   return (
     <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg z-50 max-h-[240px] overflow-y-auto">
       {sessions.map((s) => (
         <button
           key={s.id}
-          onClick={() => {
-            switchSession(s.id);
-            onClose();
-          }}
+          onClick={() => { switchSession(s.id); onClose(); }}
           className={cn(
             "w-full text-left px-3 py-2 text-xs/relaxed hover:bg-accent transition-colors flex items-center gap-2",
             s.id === activeSessionId && "bg-accent"
@@ -153,10 +194,7 @@ function SessionDropdown({
           <span className="truncate flex-1">{s.title}</span>
           {sessions.length > 1 && s.id !== activeSessionId && (
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                deleteSession(s.id);
-              }}
+              onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
               className="text-[0.625rem] text-muted-foreground hover:text-destructive shrink-0"
             >
               ×
@@ -168,16 +206,22 @@ function SessionDropdown({
   );
 }
 
+// ─── Main component ───────────────────────────────────────
+
 export default function ChatPanel() {
   const [localInput, setLocalInput] = useState("");
   const [showHistory, setShowHistory] = useState(false);
+  const [showAllTemplates, setShowAllTemplates] = useState(false);
   const {
     sessions,
     activeSessionId,
     createSession,
     updateSessionTitle,
+    tokenEstimate,
+    addTokens,
   } = useAppStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const executedToolCalls = useRef(new Set<string>());
 
@@ -191,7 +235,7 @@ export default function ChatPanel() {
       })
   );
 
-  const { messages, sendMessage, status, setMessages } = useChat({
+  const { messages, sendMessage, status, setMessages, regenerate } = useChat({
     id: activeSessionId,
     transport,
     onError: (error) => {
@@ -200,6 +244,7 @@ export default function ChatPanel() {
   });
 
   const isLoading = status === "streaming" || status === "submitted";
+  const hasError = status === "error";
 
   // Execute tool calls on the client as they arrive
   useEffect(() => {
@@ -229,27 +274,51 @@ export default function ChatPanel() {
   useEffect(() => {
     const firstUserMsg = messages.find((m) => m.role === "user");
     if (firstUserMsg && activeSession?.title === "New Chat") {
-      const content =
-        firstUserMsg.parts
-          ?.filter(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (p: any) => p.type === "text"
-          )
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .map((p: any) => p.text)
-          .join("") || "";
+      const content = firstUserMsg.parts
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ?.filter((p: any) => p.type === "text")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .map((p: any) => p.text)
+        .join("") || "";
       if (content) {
-        const title =
-          content.slice(0, 50) + (content.length > 50 ? "..." : "");
-        updateSessionTitle(activeSessionId, title);
+        updateSessionTitle(activeSessionId, content.slice(0, 50) + (content.length > 50 ? "..." : ""));
       }
     }
   }, [messages, activeSessionId, activeSession?.title, updateSessionTitle]);
 
-  // Scroll to bottom on new messages
+  // Estimate tokens
+  useEffect(() => {
+    let total = 0;
+    for (const msg of messages) {
+      for (const part of msg.parts ?? []) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if ((part as any).type === "text" && (part as any).text) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          total += Math.ceil((part as any).text.length / 4);
+        }
+      }
+    }
+    addTokens(total);
+  // only on message count changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages.length]);
+
+  // Scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Keyboard shortcut: Cmd+K / Ctrl+K to focus input
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   const handleSend = useCallback(
     async (text: string) => {
@@ -276,23 +345,15 @@ export default function ChatPanel() {
     setMessages([]);
   }, [createSession, setMessages]);
 
-  const handleImport = useCallback(() => {
-    fileInputRef.current?.click();
+  const handlePrint = useCallback(() => {
+    window.print();
   }, []);
 
-  const handleFileChange = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) {
-        await importXlsx(file);
-        e.target.value = "";
-      }
-    },
-    []
-  );
+  const visibleTemplates = showAllTemplates ? TEMPLATES : TEMPLATES.slice(0, 5);
+  const showFollowUps = !isLoading && messages.length > 0 && messages[messages.length - 1]?.role === "assistant";
 
   return (
-    <div className="flex flex-col h-full bg-card">
+    <div className="flex flex-col h-full bg-card" data-print-hide>
       {/* Header */}
       <div className="px-3 py-3 border-b border-border flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
@@ -301,11 +362,19 @@ export default function ChatPanel() {
           </div>
           <div>
             <h1 className="text-sm font-medium leading-none">Cursor for Excel</h1>
-            <p className="text-[0.625rem] text-muted-foreground mt-0.5">AI-powered spreadsheet</p>
+            <p className="text-[0.625rem] text-muted-foreground mt-0.5">
+              AI spreadsheet
+              {tokenEstimate > 0 && (
+                <span className="ml-1 opacity-60">· ~{tokenEstimate.toLocaleString()} tokens</span>
+              )}
+            </p>
           </div>
         </div>
         <div className="flex gap-1">
-          <Button variant="outline" size="icon-sm" onClick={handleImport} title="Import .xlsx">
+          <Button variant="outline" size="icon-sm" onClick={handlePrint} title="Print">
+            <Printer weight="bold" />
+          </Button>
+          <Button variant="outline" size="icon-sm" onClick={() => fileInputRef.current?.click()} title="Import .xlsx">
             <UploadSimple weight="bold" />
           </Button>
           <Button variant="outline" size="icon-sm" onClick={exportXlsx} title="Export .xlsx">
@@ -330,24 +399,13 @@ export default function ChatPanel() {
           <span className="truncate flex-1">{activeSession?.title ?? "New Chat"}</span>
           <CaretDown
             weight="bold"
-            className={cn(
-              "size-3 shrink-0 text-muted-foreground transition-transform",
-              showHistory && "rotate-180"
-            )}
+            className={cn("size-3 shrink-0 text-muted-foreground transition-transform", showHistory && "rotate-180")}
           />
         </button>
-        {showHistory && (
-          <SessionDropdown onClose={() => setShowHistory(false)} />
-        )}
+        {showHistory && <SessionDropdown onClose={() => setShowHistory(false)} />}
       </div>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".xlsx,.xls"
-        className="hidden"
-        onChange={handleFileChange}
-      />
+      <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (f) { await importXlsx(f); e.target.value = ""; } }} />
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
@@ -360,6 +418,9 @@ export default function ChatPanel() {
               <p className="text-sm font-medium">Welcome to Cursor for Excel</p>
               <p className="text-xs text-muted-foreground mt-1 max-w-[260px]">
                 Describe what you want to build and the AI agent will create it in the spreadsheet.
+              </p>
+              <p className="text-[0.625rem] text-muted-foreground mt-2 opacity-60">
+                Press <kbd className="px-1 py-0.5 rounded bg-muted text-[0.5625rem]">⌘K</kbd> to focus chat
               </p>
             </div>
           </div>
@@ -377,13 +438,58 @@ export default function ChatPanel() {
             </div>
           </div>
         )}
+
+        {/* Error retry */}
+        {hasError && (
+          <div className="flex justify-start">
+            <div className="bg-destructive/10 text-destructive px-3 py-2 rounded-lg text-xs/relaxed flex items-center gap-2">
+              <span>Something went wrong.</span>
+              <Button variant="outline" size="xs" onClick={() => regenerate()} className="text-destructive border-destructive/30">
+                <ArrowCounterClockwise weight="bold" className="size-3" />
+                Retry
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Follow-up suggestions */}
+        {showFollowUps && (
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {FOLLOW_UP_SUGGESTIONS.map((s) => (
+              <Button
+                key={s.label}
+                variant="outline"
+                size="xs"
+                className="text-[0.625rem] gap-1 opacity-70 hover:opacity-100"
+                onClick={() => handleSend(s.prompt)}
+              >
+                {s.label}
+              </Button>
+            ))}
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 
       {/* Templates */}
       <div className="px-3 py-2 border-t border-border shrink-0">
-        <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
-          {TEMPLATES.map((t) => (
+        {messages.length === 0 && (
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[0.625rem] font-medium text-muted-foreground">Templates</span>
+            <button
+              onClick={() => setShowAllTemplates(!showAllTemplates)}
+              className="text-[0.625rem] text-primary hover:underline"
+            >
+              {showAllTemplates ? "Show less" : `Show all (${TEMPLATES.length})`}
+            </button>
+          </div>
+        )}
+        <div className={cn(
+          "flex gap-1.5 overflow-x-auto no-scrollbar",
+          messages.length === 0 && showAllTemplates && "flex-wrap"
+        )}>
+          {(messages.length === 0 ? visibleTemplates : TEMPLATES.slice(0, 5)).map((t) => (
             <Button
               key={t.label}
               variant="outline"
@@ -396,17 +502,37 @@ export default function ChatPanel() {
               {t.label}
             </Button>
           ))}
+          {messages.length === 0 && !showAllTemplates && (
+            <Button variant="ghost" size="xs" className="shrink-0 text-muted-foreground" onClick={() => setShowAllTemplates(true)}>
+              +{TEMPLATES.length - 5} more
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Input */}
+      {/* Explain button + Input */}
       <div className="px-3 pb-3 pt-2 shrink-0">
+        {messages.length > 0 && (
+          <div className="flex gap-1.5 mb-2">
+            <Button
+              variant="ghost"
+              size="xs"
+              className="text-[0.625rem] gap-1 text-muted-foreground"
+              disabled={isLoading}
+              onClick={() => handleSend("Analyze the current spreadsheet and explain what it contains, what the formulas do, and any issues you notice.")}
+            >
+              <MagnifyingGlass weight="bold" className="size-3" />
+              Explain this sheet
+            </Button>
+          </div>
+        )}
         <div className="flex gap-2 items-end">
           <textarea
+            ref={inputRef}
             value={localInput}
             onChange={(e) => setLocalInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Describe what to build..."
+            placeholder="Describe what to build... (⌘K)"
             rows={1}
             disabled={isLoading}
             className={cn(
@@ -416,16 +542,8 @@ export default function ChatPanel() {
               "disabled:opacity-50 disabled:cursor-not-allowed"
             )}
           />
-          <Button
-            size="icon"
-            disabled={!localInput.trim() || isLoading}
-            onClick={() => handleSend(localInput)}
-          >
-            {isLoading ? (
-              <CircleNotch weight="bold" className="animate-spin" />
-            ) : (
-              <PaperPlaneTilt weight="fill" />
-            )}
+          <Button size="icon" disabled={!localInput.trim() || isLoading} onClick={() => handleSend(localInput)}>
+            {isLoading ? <CircleNotch weight="bold" className="animate-spin" /> : <PaperPlaneTilt weight="fill" />}
           </Button>
         </div>
       </div>
