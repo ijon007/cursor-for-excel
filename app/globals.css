@@ -217,6 +217,63 @@
   fill: var(--foreground);
 }
 
+/* Dark mode: force all SVG icon paths to white */
+.dark .fortune-toolbar svg,
+.dark .fortune-toolbar svg path,
+.dark .fortune-toolbar svg circle,
+.dark .fortune-toolbar svg rect,
+.dark .fortune-toolbar svg line,
+.dark .fortune-toolbar svg polyline,
+.dark .fortune-toolbar svg polygon {
+  color: var(--foreground) !important;
+  fill: var(--foreground) !important;
+  stroke: var(--foreground) !important;
+}
+
+.dark .fortune-sheettab-button svg,
+.dark .fortune-sheettab-button svg path,
+.dark .fortune-sheettab-scroll svg,
+.dark .fortune-sheettab-scroll svg path,
+.dark .fortune-zoom-button svg,
+.dark .fortune-zoom-button svg path {
+  color: var(--foreground) !important;
+  fill: var(--foreground) !important;
+}
+
+.dark .fortune-fx-icon svg,
+.dark .fortune-fx-icon svg path {
+  color: var(--muted-foreground) !important;
+  fill: var(--muted-foreground) !important;
+}
+
+/* Dark mode: toolbar sub-menus (e.g., merge popup) */
+.toolbar-item-sub-menu {
+  background: var(--popover) !important;
+  color: var(--popover-foreground) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 4px 16px oklch(0 0 0 / 12%) !important;
+}
+
+.toolbar-item-sub-menu svg,
+.toolbar-item-sub-menu svg path {
+  fill: var(--foreground) !important;
+}
+
+/* Dark mode: custom color picker */
+.dark #fortune-custom-color {
+  background: var(--popover) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.dark #fortune-custom-color .color-reset {
+  color: var(--popover-foreground) !important;
+  background: var(--popover) !important;
+}
+
+.dark #fortune-custom-color .color-reset:hover {
+  background: var(--accent) !important;
+}
+
 /* ──────────────────────────────────────────────────────────────────────
    FortuneSheet — Formula bar (fx editor)
    ────────────────────────────────────────────────────────────────────── */
@@ -372,6 +429,15 @@
 }
 
 .luckysheet-cols-menu .luckysheet-cols-menuitem .luckysheet-cols-menuitem-content {
+  color: var(--popover-foreground) !important;
+}
+
+/* Dark mode: context menu icons */
+.dark .fortune-context-menu svg,
+.dark .fortune-context-menu svg path,
+.dark .luckysheet-cols-menu svg,
+.dark .luckysheet-cols-menu svg path {
+  fill: var(--popover-foreground) !important;
   color: var(--popover-foreground) !important;
 }
 
