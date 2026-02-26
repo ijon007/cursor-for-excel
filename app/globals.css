@@ -211,10 +211,28 @@
   color: var(--background) !important;
 }
 
-/* SVG icons inside toolbar inherit foreground color */
+/* SVG icons inside toolbar inherit foreground color (light mode) */
 .fortune-toolbar svg {
   color: var(--foreground);
   fill: var(--foreground);
+}
+
+/* ── Dark mode: toolbar icons white (filter forces dark icons to solid white) ─ */
+.dark .fortune-toolbar .fortune-toolbar-button svg,
+.dark .fortune-toolbar .fortune-toolbar-combo svg {
+  filter: brightness(0) invert(1) !important;
+}
+
+.dark .fortune-toolbar .fortune-toolbar-button,
+.dark .fortune-toolbar .fortune-toolbar-combo {
+  color: white !important;
+  fill: white !important;
+}
+
+.dark .fortune-toolbar .fortune-toolbar-combo-button,
+.dark .fortune-toolbar .fortune-toolbar-combo-text {
+  color: white !important;
+  fill: white !important;
 }
 
 /* ── Dark mode: ALL SVG icons white everywhere ──────────────────────── */
@@ -235,6 +253,16 @@
   color: var(--popover-foreground) !important;
   border: 1px solid var(--border) !important;
   box-shadow: 0 4px 16px oklch(0 0 0 / 12%) !important;
+}
+
+/* Dark mode: dropdown menu icons white (filter forces dark icons to solid white) */
+.dark .toolbar-item-sub-menu svg,
+.dark .fortune-toolbar-select svg,
+.dark .fortune-toolbar-menu-line svg,
+.dark .fortune-border-select-menu svg,
+.dark .fortune-toolbar-select-option svg,
+.dark .fortune-toolbar-more-container svg {
+  filter: brightness(0) invert(1) !important;
 }
 
 /* Border-select option hover */
@@ -279,22 +307,25 @@
 }
 
 /* ── Sheet tab row: +, grid, scroll, item-function icons ──────────── */
-.dark .luckysheet-sheet-area svg,
-.dark .luckysheet-sheet-area svg path,
 .dark .fortune-sheettab-button svg,
-.dark .fortune-sheettab-button svg path,
 .dark .fortune-sheettab-scroll svg,
-.dark .fortune-sheettab-scroll svg path,
-.dark .fortune-zoom-button svg,
-.dark .fortune-zoom-button svg path,
-.dark .fortune-zoom-container svg,
-.dark .fortune-zoom-container svg path,
-.dark .luckysheet-sheets-item-function svg,
-.dark .luckysheet-sheets-item-function svg path,
 .dark .fortune-sheet-area-right svg,
-.dark .fortune-sheet-area-right svg path {
-  color: var(--foreground) !important;
-  fill: var(--foreground) !important;
+.dark .luckysheet-sheets-item-function svg {
+  filter: brightness(0) invert(1) !important;
+}
+
+.dark .fortune-sheettab-button,
+.dark .fortune-sheettab-scroll,
+.dark .luckysheet-sheets-item-function,
+.dark .fortune-sheet-area-right {
+  color: white !important;
+  fill: white !important;
+}
+
+.dark .luckysheet-sheets-m .iconfont,
+.dark .luckysheet-sheets-m .luckysheet-iconfont-caidan2 {
+  color: white !important;
+  fill: white !important;
 }
 
 /* ── Filter menu ──────────────────────────────────────────────────── */
@@ -498,15 +529,11 @@
   color: var(--popover-foreground) !important;
 }
 
-/* Dark mode: context menu & menu icons */
+/* Dark mode: context menu & menu icons (filter forces dark icons to solid white) */
 .dark .fortune-context-menu svg,
-.dark .fortune-context-menu svg path,
 .dark .luckysheet-cols-menu svg,
-.dark .luckysheet-cols-menu svg path,
-.dark .fortune-menuitem-row svg,
-.dark .fortune-menuitem-row svg path {
-  fill: var(--popover-foreground) !important;
-  color: var(--popover-foreground) !important;
+.dark .fortune-menuitem-row svg {
+  filter: brightness(0) invert(1) !important;
 }
 
 /* ──────────────────────────────────────────────────────────────────────
