@@ -10,7 +10,15 @@ import {
   SidebarSimple,
   Sparkle,
 } from "@phosphor-icons/react";
-import ChatPanel from "@/components/chat-panel";
+
+const ChatPanel = dynamic(() => import("@/components/chat-panel"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-full bg-card p-4">
+      <p className="text-xs text-muted-foreground">Loading chat...</p>
+    </div>
+  ),
+});
 import { useAppStore } from "@/lib/store";
 import { handleUndo, handleRedo } from "@/lib/tools";
 import { Button } from "@/components/ui/button";
@@ -95,15 +103,15 @@ export default function AppShell() {
           </div>
           <span className="text-xs font-medium">Cursor for Excel</span>
         </div>
-        <div className="flex items-center gap-0.5">
-          <Button variant="ghost" size="icon-xs" onClick={handleUndo} title="Undo">
-            <ArrowCounterClockwise weight="bold" />
-          </Button>
-          <Button variant="ghost" size="icon-xs" onClick={handleRedo} title="Redo">
-            <ArrowClockwise weight="bold" />
-          </Button>
-        </div>
         <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5">
+            <Button variant="ghost" size="icon-xs" onClick={handleUndo} title="Undo">
+              <ArrowCounterClockwise weight="bold" />
+            </Button>
+            <Button variant="ghost" size="icon-xs" onClick={handleRedo} title="Redo">
+              <ArrowClockwise weight="bold" />
+            </Button>
+          </div>
           <Button variant="ghost" size="icon-xs" onClick={toggleDarkMode} title="Toggle dark mode">
             {isDarkMode ? <Sun weight="bold" /> : <Moon weight="bold" />}
           </Button>

@@ -130,6 +130,11 @@
   position: relative;
 }
 
+/* Hide empty row below sheet tabs (fortune-stat-area) */
+.fortune-container .fortune-stat-area {
+  display: none !important;
+}
+
 .fortune-sheet-container .fortune-sheet-container-wraper {
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }

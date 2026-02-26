@@ -404,7 +404,7 @@ export default function ChatPanel() {
       <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (f) { await importXlsx(f); e.target.value = ""; } }} />
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0 no-scrollbar">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center gap-3 px-4">
             <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center">
