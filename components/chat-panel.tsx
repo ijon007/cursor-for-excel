@@ -11,7 +11,6 @@ import {
   CircleNotch,
   Sparkle,
   Plus,
-  CaretDown,
   Wallet,
   ChartLineUp,
   CurrencyDollar,
@@ -35,6 +34,14 @@ import { useAppStore } from "@/lib/store";
 import { executeToolOnClient, getToolDescription } from "@/lib/tools";
 import { serializeSheetToString } from "@/lib/serialize-sheet";
 import { Button } from "@/components/ui/button";
+import {
+  Combobox,
+  ComboboxInput,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+  ComboboxCollection,
+} from "@/components/ui/combobox";
 import { cn } from "@/lib/utils";
 import { importXlsx, exportXlsx } from "@/lib/file-io";
 import MarkdownContent from "@/components/markdown-content";
@@ -175,50 +182,17 @@ function MessageBubble({ message }: { message: UIMessage }) {
   );
 }
 
-function SessionDropdown({ onClose }: { onClose: () => void }) {
-  const { sessions, activeSessionId, switchSession, deleteSession } = useAppStore();
-
-  return (
-    <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg z-50 max-h-[240px] overflow-y-auto">
-      {sessions.map((s) => (
-        <div
-          key={s.id}
-          role="button"
-          tabIndex={0}
-          onClick={() => { switchSession(s.id); onClose(); }}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); switchSession(s.id); onClose(); } }}
-          className={cn(
-            "w-full text-left px-3 py-2 text-xs/relaxed hover:bg-accent transition-colors flex items-center gap-2 cursor-pointer",
-            s.id === activeSessionId && "bg-accent"
-          )}
-        >
-          <ChatIcon weight="bold" className="size-3 shrink-0 text-muted-foreground" />
-          <span className="truncate flex-1">{s.title}</span>
-          {sessions.length > 1 && s.id !== activeSessionId && (
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
-              className="text-[0.625rem] text-muted-foreground hover:text-destructive shrink-0"
-            >
-              ×
-            </button>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // ─── Main component ───────────────────────────────────────
 
 export default function ChatPanel() {
   const [localInput, setLocalInput] = useState("");
-  const [showHistory, setShowHistory] = useState(false);
   const [showAllTemplates, setShowAllTemplates] = useState(false);
   const {
     sessions,
     activeSessionId,
     createSession,
+    switchSession,
+    deleteSession,
     updateSessionTitle,
     tokenEstimate,
     addTokens,
@@ -358,7 +332,7 @@ export default function ChatPanel() {
   return (
     <div className="flex flex-col h-full bg-card" data-print-hide>
       {/* Header */}
-      <div className="px-3 py-2 border-b border-border flex items-center justify-between shrink-0">
+      <div className="px-3 py-2 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-1.5">
           <span className="text-xs font-medium">AI Chat</span>
           {tokenEstimate > 0 && (
@@ -383,22 +357,48 @@ export default function ChatPanel() {
       </div>
 
       {/* Session Picker */}
-      <div className="px-3 pt-2 pb-1 shrink-0 relative">
-        <button
-          onClick={() => setShowHistory(!showHistory)}
-          className={cn(
-            "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs/relaxed",
-            "bg-input/20 dark:bg-input/30 border border-input hover:bg-input/40 transition-colors text-left"
-          )}
+      <div className="px-2 pb-1 shrink-0">
+        <Combobox
+          value={activeSessionId}
+          onValueChange={(id) => id != null && switchSession(id)}
+          items={sessions.map((s) => ({ value: s.id, label: s.title }))}
+          filter={() => true}
         >
-          <ChatIcon weight="bold" className="size-3 shrink-0 text-muted-foreground" />
-          <span className="truncate flex-1">{activeSession?.title ?? "New Chat"}</span>
-          <CaretDown
-            weight="bold"
-            className={cn("size-3 shrink-0 text-muted-foreground transition-transform", showHistory && "rotate-180")}
+          <ComboboxInput
+            placeholder="New Chat"
+            showClear={false}
+            className="w-full bg-input/20 dark:bg-input/30 border-input"
           />
-        </button>
-        {showHistory && <SessionDropdown onClose={() => setShowHistory(false)} />}
+          <ComboboxContent>
+            <ComboboxList>
+              <ComboboxCollection>
+                {(item) => (
+                  <ComboboxItem
+                    key={item.value}
+                    value={item.value}
+                    className="gap-2"
+                  >
+                    <ChatIcon weight="bold" className="size-3 shrink-0 text-muted-foreground" />
+                    <span className="truncate flex-1">{item.label}</span>
+                    {sessions.length > 1 && item.value !== activeSessionId && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          deleteSession(item.value);
+                        }}
+                        className="text-[0.625rem] text-muted-foreground hover:text-destructive shrink-0 -mr-1"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </ComboboxItem>
+                )}
+              </ComboboxCollection>
+            </ComboboxList>
+          </ComboboxContent>
+        </Combobox>
       </div>
 
       <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (f) { await importXlsx(f); e.target.value = ""; } }} />
@@ -533,7 +533,7 @@ export default function ChatPanel() {
             disabled={isLoading}
             className={cn(
               "bg-input/20 dark:bg-input/30 border-input focus-visible:border-ring focus-visible:ring-ring/30",
-              "flex-1 min-h-[2rem] max-h-[6rem] resize-none rounded-md border px-2.5 py-1.5 text-xs/relaxed",
+              "flex-1 min-h-8 max-h-24 resize-none rounded-md border px-2.5 py-1.5 text-xs/relaxed",
               "placeholder:text-muted-foreground outline-none focus-visible:ring-2 transition-colors",
               "disabled:opacity-50 disabled:cursor-not-allowed"
             )}
