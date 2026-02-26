@@ -130,6 +130,11 @@
   position: relative;
 }
 
+/* Hide the bottom stat bar (sheet tabs, zoom, etc.) */
+.fortune-sheet-container .fortune-stat-area {
+  display: none !important;
+}
+
 .fortune-sheet-container .fortune-sheet-container-wraper {
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
