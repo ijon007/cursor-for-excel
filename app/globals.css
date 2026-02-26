@@ -130,7 +130,6 @@
   position: relative;
 }
 
-/* Hide empty row below sheet tabs (fortune-stat-area) */
 .fortune-container .fortune-stat-area {
   display: none !important;
 }
@@ -139,7 +138,472 @@
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Hide scrollbar for template buttons */
+/* ──────────────────────────────────────────────────────────────────────
+   FortuneSheet — Main container
+   ────────────────────────────────────────────────────────────────────── */
+.fortune-container {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   FortuneSheet — Toolbar
+   ────────────────────────────────────────────────────────────────────── */
+.fortune-toolbar {
+  background: var(--muted) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.fortune-toolbar-divider {
+  background-color: var(--border) !important;
+}
+
+.fortune-toolbar-menu-divider {
+  background-color: var(--border) !important;
+}
+
+.fortune-toolbar-button:hover,
+.fortune-toolbar-combo:hover {
+  background-color: var(--accent) !important;
+}
+
+.fortune-toolbar-combo-arrow:hover {
+  background-color: var(--accent) !important;
+}
+
+.fortune-toolbar-button:active,
+.fortune-toolbar-combo:active {
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
+
+.fortune-toolbar-combo-button {
+  color: var(--foreground) !important;
+}
+
+.fortune-toolbar-subtext {
+  color: var(--muted-foreground) !important;
+}
+
+.fortune-toolbar-select,
+.fortune-toolbar-color-picker {
+  background: var(--popover) !important;
+  box-shadow: 0 4px 16px oklch(0 0 0 / 12%) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.fortune-toolbar-select-option {
+  color: var(--foreground) !important;
+}
+
+.fortune-toolbar-select-option:hover {
+  background: var(--accent) !important;
+}
+
+.fortune-toolbar-more-container {
+  background: var(--popover) !important;
+  box-shadow: 0 4px 16px oklch(0 0 0 / 12%) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.fortune-tooltip {
+  background-color: var(--foreground) !important;
+  color: var(--background) !important;
+}
+
+/* SVG icons inside toolbar inherit foreground color (light mode) */
+.fortune-toolbar svg {
+  color: var(--foreground);
+  fill: var(--foreground);
+}
+
+/* ── Dark mode: toolbar icons white (filter forces dark icons to solid white) ─ */
+.dark .fortune-toolbar .fortune-toolbar-button svg,
+.dark .fortune-toolbar .fortune-toolbar-combo svg {
+  filter: brightness(0) invert(1) !important;
+}
+
+.dark .fortune-toolbar .fortune-toolbar-button,
+.dark .fortune-toolbar .fortune-toolbar-combo {
+  color: white !important;
+  fill: white !important;
+}
+
+.dark .fortune-toolbar .fortune-toolbar-combo-button,
+.dark .fortune-toolbar .fortune-toolbar-combo-text {
+  color: white !important;
+  fill: white !important;
+}
+
+/* ── Dark mode: ALL SVG icons white everywhere ──────────────────────── */
+.dark .fortune-container svg,
+.dark .fortune-container svg path,
+.dark .fortune-container svg circle,
+.dark .fortune-container svg rect,
+.dark .fortune-container svg line,
+.dark .fortune-container svg polyline,
+.dark .fortune-container svg polygon {
+  color: var(--foreground) !important;
+  fill: var(--foreground) !important;
+}
+
+/* Toolbar sub-menus (merge, alignment, etc.) */
+.toolbar-item-sub-menu {
+  background: var(--popover) !important;
+  color: var(--popover-foreground) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 4px 16px oklch(0 0 0 / 12%) !important;
+}
+
+/* Dark mode: dropdown menu icons white (filter forces dark icons to solid white) */
+.dark .toolbar-item-sub-menu svg,
+.dark .fortune-toolbar-select svg,
+.dark .fortune-toolbar-menu-line svg,
+.dark .fortune-border-select-menu svg,
+.dark .fortune-toolbar-select-option svg,
+.dark .fortune-toolbar-more-container svg {
+  filter: brightness(0) invert(1) !important;
+}
+
+/* Border-select option hover */
+.dark .fortune-border-select-option:hover {
+  background: var(--accent) !important;
+}
+
+/* ── Color pickers (#fortune-custom-color + #fortune-change-color) ── */
+.dark #fortune-custom-color,
+.dark #fortune-change-color {
+  background: var(--popover) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 4px 16px oklch(0 0 0 / 12%) !important;
+}
+
+.dark #fortune-custom-color .color-reset,
+.dark #fortune-change-color .color-reset {
+  color: var(--popover-foreground) !important;
+  background: var(--popover) !important;
+}
+
+.dark #fortune-custom-color .color-reset:hover,
+.dark #fortune-change-color .color-reset:hover {
+  background: var(--accent) !important;
+}
+
+.dark #fortune-custom-color .custom-color,
+.dark #fortune-change-color .custom-color {
+  background: var(--card) !important;
+  color: var(--card-foreground) !important;
+}
+
+.dark #fortune-custom-color .button-basic,
+.dark #fortune-change-color .button-basic {
+  color: var(--foreground) !important;
+}
+
+.dark .button-primary {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
+
+/* ── Sheet tab row: +, grid, scroll, item-function icons ──────────── */
+.dark .fortune-sheettab-button svg,
+.dark .fortune-sheettab-scroll svg,
+.dark .fortune-sheet-area-right svg,
+.dark .luckysheet-sheets-item-function svg {
+  filter: brightness(0) invert(1) !important;
+}
+
+.dark .fortune-sheettab-button,
+.dark .fortune-sheettab-scroll,
+.dark .luckysheet-sheets-item-function,
+.dark .fortune-sheet-area-right {
+  color: white !important;
+  fill: white !important;
+}
+
+.dark .luckysheet-sheets-m .iconfont,
+.dark .luckysheet-sheets-m .luckysheet-iconfont-caidan2 {
+  color: white !important;
+  fill: white !important;
+}
+
+/* ── Filter menu ──────────────────────────────────────────────────── */
+.dark .fortune-filter-menu {
+  background: var(--popover) !important;
+  color: var(--popover-foreground) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.dark .fortune-filter-menu .button-default,
+.dark .luckysheet-filter-bycolor-submenu .button-default {
+  background-color: var(--secondary) !important;
+  color: var(--secondary-foreground) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.dark .fortune-filter-menu .button-default:hover,
+.dark .luckysheet-filter-bycolor-submenu .button-default:hover {
+  background-color: var(--accent) !important;
+}
+
+/* ── Data verification dialog ─────────────────────────────────────── */
+.dark #fortune-data-verification {
+  color: var(--card-foreground) !important;
+}
+
+.dark #fortune-data-verification .button-close {
+  background-color: var(--secondary) !important;
+  color: var(--secondary-foreground) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.dark #fortune-data-verification input,
+.dark #fortune-data-verification select {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   FortuneSheet — Formula bar (fx editor)
+   ────────────────────────────────────────────────────────────────────── */
+.fortune-fx-editor {
+  background-color: var(--background) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.fortune-name-box-container {
+  border-right: 1px solid var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+.fortune-name-box {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+.fortune-fx-icon {
+  color: var(--muted-foreground) !important;
+}
+
+.fortune-fx-icon svg {
+  fill: var(--muted-foreground) !important;
+}
+
+.dark .fortune-fx-icon svg,
+.dark .fortune-fx-icon svg path {
+  fill: var(--muted-foreground) !important;
+  color: var(--muted-foreground) !important;
+}
+
+.fortune-fx-input-container {
+  border-left: 1px solid var(--border) !important;
+}
+
+.fortune-fx-input {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   FortuneSheet — Column / row headers
+   ────────────────────────────────────────────────────────────────────── */
+.fortune-col-header,
+.fortune-col-header-hover,
+.fortune-col-header-selected {
+  color: var(--muted-foreground) !important;
+}
+
+.fortune-row-header {
+  color: var(--muted-foreground) !important;
+}
+
+.fortune-left-top {
+  background-color: var(--background) !important;
+  border-color: var(--border) !important;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   FortuneSheet — Sheet tabs (bottom bar)
+   ────────────────────────────────────────────────────────────────────── */
+.luckysheet-sheet-area {
+  background-color: var(--muted) !important;
+  color: var(--foreground) !important;
+  border-top: 1px solid var(--border) !important;
+}
+
+#luckysheet-bottom-pager {
+  background-color: var(--muted) !important;
+}
+
+.luckysheet-sheet-area div.luckysheet-sheets-item {
+  background-color: var(--muted) !important;
+  color: var(--muted-foreground) !important;
+  border-left: 1px solid var(--border) !important;
+  border-right: 1px solid var(--border) !important;
+}
+
+.luckysheet-sheet-area div.luckysheet-sheets-item:hover {
+  background-color: var(--accent) !important;
+  color: var(--accent-foreground) !important;
+}
+
+.luckysheet-sheet-area div.luckysheet-sheets-item .luckysheet-sheets-item-menu {
+  color: var(--muted-foreground) !important;
+}
+
+.luckysheet-sheet-area div.luckysheet-sheets-item .luckysheet-sheets-item-menu:hover {
+  color: var(--foreground) !important;
+}
+
+.luckysheet-sheet-area div.luckysheet-sheets-item-active {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+  border-top-color: var(--background) !important;
+}
+
+.luckysheet-sheet-area div.luckysheet-sheets-item-active:hover {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+.fortune-sheettab-button:hover {
+  background-color: var(--accent) !important;
+}
+
+.fortune-sheettab-scroll:hover {
+  background-color: var(--accent) !important;
+}
+
+.fortune-sheettab-container .boundary {
+  background: var(--muted) !important;
+}
+
+.fortune-zoom-button:hover {
+  background: var(--accent) !important;
+}
+
+.fortune-zoom-ratio {
+  color: var(--foreground) !important;
+}
+
+.fortune-zoom-ratio-item:hover {
+  background: var(--accent) !important;
+}
+
+.fortune-zoom-ratio-menu {
+  background: var(--popover) !important;
+  box-shadow: 0 4px 16px oklch(0 0 0 / 12%) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.luckysheet-sheet-selection-calInfo {
+  color: var(--muted-foreground) !important;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   FortuneSheet — Context menu
+   ────────────────────────────────────────────────────────────────────── */
+.fortune-context-menu {
+  background: var(--popover) !important;
+  color: var(--popover-foreground) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 4px 16px oklch(0 0 0 / 12%) !important;
+}
+
+.fortune-context-menu-divider {
+  background-color: var(--border) !important;
+}
+
+.luckysheet-cols-menu .luckysheet-cols-menuitem {
+  color: var(--popover-foreground) !important;
+}
+
+.luckysheet-cols-menu .luckysheet-cols-menuitem:hover,
+.luckysheet-cols-menu .luckysheet-cols-menuitem-hover {
+  background: var(--accent) !important;
+}
+
+.luckysheet-cols-menu .luckysheet-cols-menuitem .luckysheet-cols-menuitem-content {
+  color: var(--popover-foreground) !important;
+}
+
+/* Dark mode: context menu & menu icons (filter forces dark icons to solid white) */
+.dark .fortune-context-menu svg,
+.dark .luckysheet-cols-menu svg,
+.dark .fortune-menuitem-row svg {
+  filter: brightness(0) invert(1) !important;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   FortuneSheet — Dialogs & modals
+   ────────────────────────────────────────────────────────────────────── */
+.fortune-dialog {
+  background: var(--card) !important;
+  color: var(--card-foreground) !important;
+  box-shadow: 0 8px 32px oklch(0 0 0 / 15%) !important;
+}
+
+.fortune-modal-container {
+  background: oklch(0 0 0 / 30%) !important;
+}
+
+.fortune-modal-dialog-icon-close {
+  color: var(--muted-foreground) !important;
+}
+
+.fortune-message-box-button.button-default {
+  background-color: var(--secondary) !important;
+  color: var(--secondary-foreground) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.fortune-message-box-button.button-primary {
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
+
+/* Search/replace dialog inputs */
+#fortune-search-replace {
+  background-color: var(--card) !important;
+  color: var(--card-foreground) !important;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   FortuneSheet — Link modify modal
+   ────────────────────────────────────────────────────────────────────── */
+.fortune-link-modify-modal .fortune-toolbar-button:hover {
+  background-color: var(--accent) !important;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   FortuneSheet — Format / number list
+   ────────────────────────────────────────────────────────────────────── */
+.format-list {
+  border: 1px solid var(--border) !important;
+  background: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   FortuneSheet — Dark mode: invert only the cell grid area
+   The inner .fortune-sheet-container (direct child of .fortune-container)
+   holds the canvas-rendered cells and headers. Toolbar, formula bar,
+   sheet tabs, and context menus sit outside it and are themed via CSS
+   variables above — they must NOT be inverted.
+   ────────────────────────────────────────────────────────────────────── */
+.dark .fortune-container > .fortune-sheet-container {
+  filter: invert(0.92) hue-rotate(180deg);
+}
+
+.dark .fortune-container > .fortune-sheet-container img {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   Scrollbar for template buttons
+   ────────────────────────────────────────────────────────────────────── */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -148,7 +612,9 @@
   scrollbar-width: none;
 }
 
-/* Smooth highlight animation for cells */
+/* ──────────────────────────────────────────────────────────────────────
+   Cell highlight animation
+   ────────────────────────────────────────────────────────────────────── */
 @keyframes cell-highlight-fade {
   0% {
     background-color: oklch(0.85 0.13 181 / 30%);
@@ -158,17 +624,9 @@
   }
 }
 
-/* FortuneSheet dark mode — invert the entire spreadsheet and correct hue shift */
-.dark .fortune-sheet-container {
-  filter: invert(0.92) hue-rotate(180deg);
-}
-/* Prevent images/charts inside the sheet from being double-inverted */
-.dark .fortune-sheet-container img,
-.dark .fortune-sheet-container canvas {
-  filter: invert(1) hue-rotate(180deg);
-}
-
-/* Print styles */
+/* ──────────────────────────────────────────────────────────────────────
+   Print styles
+   ────────────────────────────────────────────────────────────────────── */
 @media print {
   [data-print-hide] {
     display: none !important;
