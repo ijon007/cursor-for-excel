@@ -22,6 +22,7 @@ const defaultSheetData: Sheet[] = [
 export default function Spreadsheet() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const workbookRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const isSidebarOpen = useAppStore((s) => s.isSidebarOpen);
   const chatPanelWidth = useAppStore((s) => s.chatPanelWidth);
 
@@ -40,10 +41,31 @@ export default function Spreadsheet() {
     return () => clearTimeout(t);
   }, [isSidebarOpen, chatPanelWidth]);
 
+  // Shift+Scroll: convert vertical wheel to horizontal scroll
+  const handleWheel = useCallback((e: WheelEvent) => {
+    if (e.shiftKey && e.deltaY !== 0) {
+      const scrollbarX = containerRef.current?.querySelector(
+        ".luckysheet-scrollbar-x"
+      ) as HTMLDivElement | null;
+      if (scrollbarX) {
+        e.preventDefault();
+        e.stopPropagation();
+        scrollbarX.scrollLeft += e.deltaY;
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    el.addEventListener("wheel", handleWheel, { capture: true });
+    return () => el.removeEventListener("wheel", handleWheel, { capture: true });
+  }, [handleWheel]);
+
   const handleChange = useCallback(() => {}, []);
 
   return (
-    <div className="fortune-sheet-container w-full h-full">
+    <div ref={containerRef} className="fortune-sheet-container w-full h-full">
       <Workbook
         ref={workbookRef}
         data={defaultSheetData}
