@@ -56,7 +56,7 @@ ${sheetSnapshot || "Empty spreadsheet — no data yet."}`;
     model: google("gemini-2.5-flash"),
     system: systemPrompt,
     messages: modelMessages,
-    stopWhen: stepCountIs(25),
+    stopWhen: stepCountIs(50),
     tools: {
       write_cell: tool({
         description:
