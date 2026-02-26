@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { Workbook } from "@fortune-sheet/react";
 import "@fortune-sheet/react/dist/index.css";
-import { setWorkbookApi } from "@/lib/store";
+import { setWorkbookApi, useAppStore } from "@/lib/store";
 import type { Sheet } from "@fortune-sheet/core";
 
 const defaultSheetData: Sheet[] = [
@@ -22,6 +22,8 @@ const defaultSheetData: Sheet[] = [
 export default function Spreadsheet() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const workbookRef = useRef<any>(null);
+  const isSidebarOpen = useAppStore((s) => s.isSidebarOpen);
+  const chatPanelWidth = useAppStore((s) => s.chatPanelWidth);
 
   useEffect(() => {
     if (workbookRef.current) {
@@ -32,9 +34,15 @@ export default function Spreadsheet() {
     };
   }, []);
 
-  const handleChange = useCallback(() => {
-    // Sync is handled via the imperative API when needed
-  }, []);
+  // Force FortuneSheet to recalculate layout when sidebar toggles or resizes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      window.dispatchEvent(new Event("resize"));
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [isSidebarOpen, chatPanelWidth]);
+
+  const handleChange = useCallback(() => {}, []);
 
   return (
     <div className="fortune-sheet-container w-full h-full">

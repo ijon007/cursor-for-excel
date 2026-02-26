@@ -19,7 +19,6 @@ import {
   Legend,
 } from "recharts";
 import { useAppStore } from "@/lib/store";
-import { Button } from "@/components/ui/button";
 
 interface ChartData {
   type: "bar" | "line" | "pie" | "area";
@@ -129,19 +128,18 @@ export default function InlineChart({ data }: { data: ChartData }) {
   };
 
   return (
-    <div className="my-2 rounded-md border border-border bg-background/50 p-2 relative group">
+    <div className="my-2 rounded-md border border-border bg-background/50 p-2 relative">
       <div className="flex items-center justify-between mb-1">
         <p className="text-[0.625rem] font-medium">{data.title}</p>
         {data.chartId && (
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            className="opacity-0 group-hover:opacity-100 transition-opacity"
+          <button
             onClick={handleExpand}
             title="Expand chart"
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 hover:bg-primary/20 text-primary text-[0.5625rem] font-medium transition-colors"
           >
             <ArrowsOut weight="bold" className="size-3" />
-          </Button>
+            Expand
+          </button>
         )}
       </div>
       <ResponsiveContainer width="100%" height={170}>
