@@ -1,4 +1,4 @@
-import { getWorkbookApi } from "./store";
+import { getWorkbookApi, useAppStore } from "./store";
 
 function colLabel(c: number): string {
   let label = "";
@@ -18,16 +18,13 @@ function highlightCells(
 ) {
   const api = getWorkbookApi();
   if (!api) return;
-
   const color = "#d4f5f0";
   const range = [{ row: [startRow, endRow], column: [startCol, endCol] }];
-
   try {
     api.setCellFormatByRange("bg", color, range);
   } catch {
     /* ignore */
   }
-
   setTimeout(() => {
     try {
       api.setCellFormatByRange("bg", undefined, range);
@@ -40,6 +37,19 @@ function highlightCells(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function executeToolOnClient(toolName: string, args: Record<string, any>) {
   const api = getWorkbookApi();
+
+  // Chart tool doesn't need the spreadsheet API
+  if (toolName === "add_chart") {
+    useAppStore.getState().addChart({
+      id: args.chartId || Math.random().toString(36).slice(2, 10),
+      type: args.type,
+      title: args.title,
+      xLabels: args.xLabels,
+      series: args.series,
+    });
+    return;
+  }
+
   if (!api) return;
 
   try {
@@ -49,7 +59,6 @@ export function executeToolOnClient(toolName: string, args: Record<string, any>)
         highlightCells(args.row, args.col, args.row, args.col);
         break;
       }
-
       case "write_range": {
         const { startRow, startCol, values } = args;
         if (!values || values.length === 0) break;
@@ -63,13 +72,11 @@ export function executeToolOnClient(toolName: string, args: Record<string, any>)
         highlightCells(startRow, startCol, endRow, endCol);
         break;
       }
-
       case "set_formula": {
         api.setCellValue(args.row, args.col, args.formula);
         highlightCells(args.row, args.col, args.row, args.col);
         break;
       }
-
       case "format_cells": {
         const { startRow, startCol, endRow, endCol } = args;
         const range = [
@@ -83,62 +90,104 @@ export function executeToolOnClient(toolName: string, args: Record<string, any>)
           api.setCellFormatByRange("fc", args.textColor, range);
         break;
       }
-
       case "insert_row": {
         api.insertRowOrColumn("row", args.index, args.count ?? 1);
         break;
       }
-
       case "insert_column": {
         api.insertRowOrColumn("column", args.index, args.count ?? 1);
         break;
       }
-
       case "add_sheet": {
         api.addSheet();
         if (args.name) {
           setTimeout(() => {
-            try {
-              api.setSheetName(args.name);
-            } catch {
-              /* ignore */
-            }
+            try { api.setSheetName(args.name); } catch { /* */ }
           }, 150);
         }
         break;
       }
-
       case "rename_sheet": {
         api.setSheetName(args.name);
         break;
       }
-
       case "clear_range": {
-        const { startRow, startCol, endRow, endCol } = args;
-        for (let r = startRow; r <= endRow; r++) {
-          for (let c = startCol; c <= endCol; c++) {
+        for (let r = args.startRow; r <= args.endRow; r++) {
+          for (let c = args.startCol; c <= args.endCol; c++) {
             api.clearCell(r, c);
           }
         }
         break;
       }
-
       case "set_column_width": {
         api.setColumnWidth(args.columns);
         break;
       }
-
       case "merge_cells": {
-        const { startRow, startCol, endRow, endCol } = args;
         api.mergeCells(
-          [{ row: [startRow, endRow], column: [startCol, endCol] }],
+          [{ row: [args.startRow, args.endRow], column: [args.startCol, args.endCol] }],
           "merge-all"
         );
+        break;
+      }
+      case "freeze_panes": {
+        api.freeze(args.type, {
+          row: args.row ?? 0,
+          column: args.column ?? 0,
+        });
+        break;
+      }
+      case "conditional_format": {
+        applyConditionalFormat(api, args);
         break;
       }
     }
   } catch (e) {
     console.error(`Tool execution error (${toolName}):`, e);
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function applyConditionalFormat(api: any, args: any) {
+  const { startRow, startCol, endRow, endCol, rule, threshold = 0, colorHigh = "#c8e6c9", colorLow = "#ffcdd2" } = args;
+
+  for (let r = startRow; r <= endRow; r++) {
+    for (let c = startCol; c <= endCol; c++) {
+      try {
+        const raw = api.getCellValue(r, c, { type: "v" });
+        const num = typeof raw === "number" ? raw : parseFloat(raw);
+        if (isNaN(num)) continue;
+
+        let bg: string | undefined;
+        switch (rule) {
+          case "highlight_above":
+            bg = num > threshold ? colorHigh : undefined;
+            break;
+          case "highlight_below":
+            bg = num < threshold ? colorLow : undefined;
+            break;
+          case "highlight_negative":
+            bg = num < 0 ? colorLow : num > 0 ? colorHigh : undefined;
+            break;
+          case "color_scale": {
+            // Collect all values in range to find min/max
+            let min = Infinity, max = -Infinity;
+            for (let rr = startRow; rr <= endRow; rr++) {
+              for (let cc = startCol; cc <= endCol; cc++) {
+                const v = api.getCellValue(rr, cc, { type: "v" });
+                const n = typeof v === "number" ? v : parseFloat(v);
+                if (!isNaN(n)) { min = Math.min(min, n); max = Math.max(max, n); }
+              }
+            }
+            if (min === max) break;
+            const pct = (num - min) / (max - min);
+            bg = pct > 0.5 ? colorHigh : colorLow;
+            break;
+          }
+        }
+        if (bg) api.setCellFormat(r, c, "bg", bg);
+      } catch { /* ignore individual cell errors */ }
+    }
   }
 }
 
@@ -172,7 +221,41 @@ export function getToolDescription(toolName: string, args: Record<string, any>):
       return `Setting column widths`;
     case "merge_cells":
       return `Merging ${colLabel(args.startCol)}${args.startRow + 1}:${colLabel(args.endCol)}${args.endRow + 1}`;
+    case "add_chart":
+      return `Creating ${args.type} chart: "${args.title}"`;
+    case "freeze_panes":
+      return `Freezing ${args.type} panes`;
+    case "conditional_format":
+      return `Conditional formatting ${colLabel(args.startCol)}${args.startRow + 1}:${colLabel(args.endCol)}${args.endRow + 1}`;
     default:
       return `${toolName}...`;
   }
+}
+
+export function handleUndo() {
+  const api = getWorkbookApi();
+  if (api) api.handleUndo();
+}
+
+export function handleRedo() {
+  const api = getWorkbookApi();
+  if (api) api.handleRedo();
+}
+
+export function selectCell(cellRef: string) {
+  const api = getWorkbookApi();
+  if (!api) return;
+  const match = cellRef.match(/^([A-Z]+)(\d+)$/);
+  if (!match) return;
+  const colStr = match[1];
+  const row = parseInt(match[2]) - 1;
+  let col = 0;
+  for (let i = 0; i < colStr.length; i++) {
+    col = col * 26 + (colStr.charCodeAt(i) - 64);
+  }
+  col -= 1;
+  try {
+    api.setSelection([{ row: [row, row], column: [col, col] }]);
+    api.scroll({ targetRow: row, targetColumn: col });
+  } catch { /* ignore */ }
 }

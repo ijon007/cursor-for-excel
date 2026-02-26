@@ -25,7 +25,9 @@ RULES:
 4. Format headers with bold and background colors for readability.
 5. Set appropriate column widths so content is visible (typical widths: 80-140 pixels).
 6. Work step by step, making one logical group of changes at a time.
-7. After completing all changes, briefly summarize what you built.
+7. After completing all changes, briefly summarize what you built using markdown formatting.
+8. When asked to create a chart, use the add_chart tool with actual numeric data (not formulas).
+9. For conditional formatting, use the conditional_format tool to color-code data ranges.
 
 Column mapping: A=0, B=1, C=2, D=3, E=4, F=5, G=6, H=7, I=8, J=9, K=10, L=11, M=12
 
@@ -38,7 +40,7 @@ ${sheetSnapshot || "Empty spreadsheet — no data yet."}`;
     model: google("gemini-2.5-flash"),
     system: systemPrompt,
     messages: modelMessages,
-    stopWhen: stepCountIs(20),
+    stopWhen: stepCountIs(25),
     tools: {
       write_cell: tool({
         description:
@@ -58,7 +60,8 @@ ${sheetSnapshot || "Empty spreadsheet — no data yet."}`;
       }),
 
       write_range: tool({
-        description: "Write a 2D array of values/formulas to a rectangular range.",
+        description:
+          "Write a 2D array of values/formulas to a rectangular range.",
         inputSchema: z.object({
           startRow: z.number().describe("0-based start row"),
           startCol: z.number().describe("0-based start column"),
@@ -74,7 +77,8 @@ ${sheetSnapshot || "Empty spreadsheet — no data yet."}`;
       }),
 
       set_formula: tool({
-        description: "Write an Excel formula to a cell. The formula must start with =.",
+        description:
+          "Write an Excel formula to a cell. The formula must start with =.",
         inputSchema: z.object({
           row: z.number().describe("0-based row index"),
           col: z.number().describe("0-based column index"),
@@ -88,7 +92,8 @@ ${sheetSnapshot || "Empty spreadsheet — no data yet."}`;
       }),
 
       format_cells: tool({
-        description: "Apply formatting (bold, background color, text color) to a range.",
+        description:
+          "Apply formatting (bold, background color, text color) to a range.",
         inputSchema: z.object({
           startRow: z.number().describe("0-based start row"),
           startCol: z.number().describe("0-based start column"),
@@ -126,8 +131,13 @@ ${sheetSnapshot || "Empty spreadsheet — no data yet."}`;
       insert_column: tool({
         description: "Insert one or more columns at a given index.",
         inputSchema: z.object({
-          index: z.number().describe("0-based column index to insert before"),
-          count: z.number().describe("Number of columns to insert").default(1),
+          index: z
+            .number()
+            .describe("0-based column index to insert before"),
+          count: z
+            .number()
+            .describe("Number of columns to insert")
+            .default(1),
         }),
         execute: async ({ index, count }) => ({
           success: true,
@@ -161,10 +171,10 @@ ${sheetSnapshot || "Empty spreadsheet — no data yet."}`;
         description:
           "Read current cell values from a range. Values are in the sheet snapshot above.",
         inputSchema: z.object({
-          startRow: z.number().describe("0-based start row"),
-          startCol: z.number().describe("0-based start column"),
-          endRow: z.number().describe("0-based end row (inclusive)"),
-          endCol: z.number().describe("0-based end column (inclusive)"),
+          startRow: z.number(),
+          startCol: z.number(),
+          endRow: z.number(),
+          endCol: z.number(),
         }),
         execute: async ({ startRow, startCol, endRow, endCol }) => ({
           success: true,
@@ -176,10 +186,10 @@ ${sheetSnapshot || "Empty spreadsheet — no data yet."}`;
       clear_range: tool({
         description: "Clear all values and formatting in a range of cells.",
         inputSchema: z.object({
-          startRow: z.number().describe("0-based start row"),
-          startCol: z.number().describe("0-based start column"),
-          endRow: z.number().describe("0-based end row (inclusive)"),
-          endCol: z.number().describe("0-based end column (inclusive)"),
+          startRow: z.number(),
+          startCol: z.number(),
+          endRow: z.number(),
+          endCol: z.number(),
         }),
         execute: async ({ startRow, startCol, endRow, endCol }) => ({
           success: true,
@@ -191,9 +201,7 @@ ${sheetSnapshot || "Empty spreadsheet — no data yet."}`;
         description:
           "Set the pixel width of columns. Pass a map of column index (string) to width (number).",
         inputSchema: z.object({
-          columns: z
-            .record(z.string(), z.number())
-            .describe('Map of column index to width, e.g. {"0": 120, "1": 90}'),
+          columns: z.record(z.string(), z.number()),
         }),
         execute: async ({ columns }) => ({
           success: true,
@@ -204,14 +212,99 @@ ${sheetSnapshot || "Empty spreadsheet — no data yet."}`;
       merge_cells: tool({
         description: "Merge a rectangular range of cells into one.",
         inputSchema: z.object({
-          startRow: z.number().describe("0-based start row"),
-          startCol: z.number().describe("0-based start column"),
-          endRow: z.number().describe("0-based end row (inclusive)"),
-          endCol: z.number().describe("0-based end column (inclusive)"),
+          startRow: z.number(),
+          startCol: z.number(),
+          endRow: z.number(),
+          endCol: z.number(),
         }),
         execute: async ({ startRow, startCol, endRow, endCol }) => ({
           success: true,
           range: `${colLabel(startCol)}${startRow + 1}:${colLabel(endCol)}${endRow + 1}`,
+        }),
+      }),
+
+      add_chart: tool({
+        description:
+          "Create a chart visualization. Provide actual numeric data, not formulas. The chart renders in the chat panel.",
+        inputSchema: z.object({
+          type: z
+            .enum(["bar", "line", "pie", "area"])
+            .describe("Chart type"),
+          title: z.string().describe("Chart title"),
+          xLabels: z.array(z.string()).describe("Labels for the x-axis / categories"),
+          series: z
+            .array(
+              z.object({
+                name: z.string(),
+                values: z.array(z.number()),
+              })
+            )
+            .describe("Data series to plot"),
+        }),
+        execute: async ({ type, title, xLabels, series }) => ({
+          success: true,
+          chartId: Math.random().toString(36).slice(2, 10),
+          type,
+          title,
+          xLabels,
+          series,
+        }),
+      }),
+
+      freeze_panes: tool({
+        description: "Freeze rows and/or columns so they stay visible when scrolling.",
+        inputSchema: z.object({
+          type: z
+            .enum(["row", "column", "both"])
+            .describe("What to freeze"),
+          row: z
+            .number()
+            .optional()
+            .describe("Row index to freeze at (0-based)"),
+          column: z
+            .number()
+            .optional()
+            .describe("Column index to freeze at (0-based)"),
+        }),
+        execute: async ({ type, row, column }) => ({
+          success: true,
+          message: `Froze ${type} at row=${row ?? "none"}, col=${column ?? "none"}`,
+        }),
+      }),
+
+      conditional_format: tool({
+        description:
+          "Apply conditional formatting to a range. Colors cells based on their values relative to a threshold or as a color scale.",
+        inputSchema: z.object({
+          startRow: z.number(),
+          startCol: z.number(),
+          endRow: z.number(),
+          endCol: z.number(),
+          rule: z
+            .enum([
+              "color_scale",
+              "highlight_above",
+              "highlight_below",
+              "highlight_negative",
+            ])
+            .describe("Formatting rule type"),
+          threshold: z
+            .number()
+            .optional()
+            .describe("Threshold for highlight rules"),
+          colorHigh: z
+            .string()
+            .optional()
+            .describe("Color for high/matching values, e.g. #c8e6c9"),
+          colorLow: z
+            .string()
+            .optional()
+            .describe("Color for low/non-matching values, e.g. #ffcdd2"),
+        }),
+        execute: async (params) => ({
+          success: true,
+          range: `${colLabel(params.startCol)}${params.startRow + 1}:${colLabel(params.endCol)}${params.endRow + 1}`,
+          rule: params.rule,
         }),
       }),
     },

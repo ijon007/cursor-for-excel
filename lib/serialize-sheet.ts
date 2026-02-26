@@ -1,101 +1,94 @@
 import { getWorkbookApi } from "./store";
 
-interface SerializedCell {
-  r: number;
-  c: number;
-  v?: string | number | boolean;
-  f?: string;
-  bold?: boolean;
-  bg?: string;
-}
-
-interface SerializedSheet {
-  name: string;
-  index: number;
-  cells: SerializedCell[];
-}
-
-interface SerializedWorkbook {
-  sheets: SerializedSheet[];
-  activeSheet: number;
-}
-
 const MAX_TOKEN_ESTIMATE = 6000;
 const AVG_CHARS_PER_TOKEN = 4;
 const MAX_CHARS = MAX_TOKEN_ESTIMATE * AVG_CHARS_PER_TOKEN;
 
-export function serializeSheet(): SerializedWorkbook | null {
+function colLabel(c: number): string {
+  let label = "";
+  let n = c;
+  while (n >= 0) {
+    label = String.fromCharCode(65 + (n % 26)) + label;
+    n = Math.floor(n / 26) - 1;
+  }
+  return label;
+}
+
+export function serializeSheetToString(): string {
   const api = getWorkbookApi();
-  if (!api) return null;
+  if (!api) return "Empty spreadsheet.";
 
   try {
     const allSheets = api.getAllSheets();
-    if (!allSheets || allSheets.length === 0) return null;
+    if (!allSheets || allSheets.length === 0) return "Empty spreadsheet.";
 
-    const serialized: SerializedWorkbook = {
-      sheets: [],
-      activeSheet: 0,
-    };
-
+    const lines: string[] = [];
     let totalChars = 0;
 
     for (let si = 0; si < allSheets.length; si++) {
       const sheet = allSheets[si];
-      const cells: SerializedCell[] = [];
+      const celldata = sheet.celldata || [];
 
-      if (sheet.status === 1) {
-        serialized.activeSheet = si;
+      if (celldata.length === 0) {
+        lines.push(`Sheet "${sheet.name || `Sheet${si + 1}`}": empty`);
+        continue;
       }
 
-      const celldata = sheet.celldata || [];
+      let maxRow = 0;
+      let maxCol = 0;
+      for (const cd of celldata) {
+        if (cd.r > maxRow) maxRow = cd.r;
+        if (cd.c > maxCol) maxCol = cd.c;
+      }
+
+      lines.push(
+        `Sheet "${sheet.name || `Sheet${si + 1}`}" (${maxRow + 1} rows × ${maxCol + 1} cols):`
+      );
+
+      // Build a sparse map for efficient lookup
+      const cellMap = new Map<string, string>();
       for (const cd of celldata) {
         if (!cd.v && cd.v !== 0) continue;
-
-        const cell: SerializedCell = { r: cd.r, c: cd.c };
-
-        if (typeof cd.v === "object" && cd.v !== null) {
-          if (cd.v.f) cell.f = cd.v.f;
-          if (cd.v.v !== undefined && cd.v.v !== null && cd.v.v !== "")
-            cell.v = cd.v.v;
-          if (cd.v.bl === 1) cell.bold = true;
-          if (cd.v.bg) cell.bg = cd.v.bg;
-        } else {
-          cell.v = cd.v;
-        }
-
-        if (cell.v === undefined && !cell.f) continue;
-
-        cells.push(cell);
-        totalChars += JSON.stringify(cell).length;
+        const val =
+          typeof cd.v === "object" && cd.v !== null
+            ? cd.v.f
+              ? cd.v.f
+              : cd.v.v !== undefined && cd.v.v !== null
+                ? String(cd.v.v)
+                : cd.v.m !== undefined
+                  ? String(cd.v.m)
+                  : ""
+            : String(cd.v);
+        if (val === "") continue;
+        cellMap.set(`${cd.r},${cd.c}`, val);
       }
 
-      serialized.sheets.push({
-        name: sheet.name || `Sheet${si + 1}`,
-        index: si,
-        cells,
-      });
+      // Output as compact CSV-like rows (only rows that have data)
+      for (let r = 0; r <= Math.min(maxRow, 200); r++) {
+        const cells: string[] = [];
+        let hasData = false;
+        for (let c = 0; c <= maxCol; c++) {
+          const v = cellMap.get(`${r},${c}`) || "";
+          cells.push(v);
+          if (v) hasData = true;
+        }
+        if (!hasData) continue;
+
+        const header = `  ${colLabel(0)}${r + 1}:`;
+        const row = `${header} ${cells.join(" | ")}`;
+        totalChars += row.length;
+        if (totalChars > MAX_CHARS) {
+          lines.push("  ... (truncated for context limit)");
+          break;
+        }
+        lines.push(row);
+      }
 
       if (totalChars > MAX_CHARS) break;
     }
 
-    return serialized;
+    return lines.join("\n") || "Empty spreadsheet.";
   } catch {
-    return null;
+    return "Empty spreadsheet.";
   }
-}
-
-export function serializeSheetToString(): string {
-  const data = serializeSheet();
-  if (!data) return "{}";
-
-  let result = JSON.stringify(data);
-
-  if (result.length > MAX_CHARS) {
-    for (const sheet of data.sheets) {
-      sheet.cells = sheet.cells.slice(0, Math.floor(sheet.cells.length * 0.7));
-    }
-    result = JSON.stringify(data);
-  }
-
-  return result;
 }

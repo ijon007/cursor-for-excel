@@ -15,6 +15,14 @@ export interface CellHighlight {
   endCol: number;
 }
 
+export interface ChartConfig {
+  id: string;
+  type: "bar" | "line" | "pie" | "area";
+  title: string;
+  xLabels: string[];
+  series: { name: string; values: number[] }[];
+}
+
 function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
@@ -25,6 +33,10 @@ interface AppState {
   sessions: ChatSession[];
   activeSessionId: string;
   highlightedCells: CellHighlight[];
+  isDarkMode: boolean;
+  chatPanelWidth: number;
+  charts: ChartConfig[];
+  tokenEstimate: number;
 
   createSession: () => string;
   switchSession: (id: string) => void;
@@ -33,6 +45,16 @@ interface AppState {
 
   addHighlight: (h: CellHighlight) => void;
   removeHighlight: (id: string) => void;
+
+  toggleDarkMode: () => void;
+  setChatPanelWidth: (w: number) => void;
+
+  addChart: (chart: ChartConfig) => void;
+  removeChart: (id: string) => void;
+  clearCharts: () => void;
+
+  addTokens: (n: number) => void;
+  resetTokens: () => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -41,6 +63,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   ],
   activeSessionId: initialSessionId,
   highlightedCells: [],
+  isDarkMode: false,
+  chatPanelWidth: 380,
+  charts: [],
+  tokenEstimate: 0,
 
   createSession: () => {
     const id = uid();
@@ -75,7 +101,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({
         sessions: remaining,
         activeSessionId:
-          get().activeSessionId === id ? remaining[0].id : get().activeSessionId,
+          get().activeSessionId === id
+            ? remaining[0].id
+            : get().activeSessionId,
       });
     }
   },
@@ -86,9 +114,26 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({
       highlightedCells: get().highlightedCells.filter((h) => h.id !== id),
     }),
+
+  toggleDarkMode: () => {
+    const next = !get().isDarkMode;
+    if (typeof document !== "undefined") {
+      document.documentElement.classList.toggle("dark", next);
+    }
+    set({ isDarkMode: next });
+  },
+
+  setChatPanelWidth: (w) => set({ chatPanelWidth: Math.max(300, Math.min(600, w)) }),
+
+  addChart: (chart) => set({ charts: [...get().charts, chart] }),
+  removeChart: (id) =>
+    set({ charts: get().charts.filter((c) => c.id !== id) }),
+  clearCharts: () => set({ charts: [] }),
+
+  addTokens: (n) => set({ tokenEstimate: get().tokenEstimate + n }),
+  resetTokens: () => set({ tokenEstimate: 0 }),
 }));
 
-// Module-level ref to the FortuneSheet Workbook imperative API
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let workbookApi: any = null;
 
