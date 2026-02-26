@@ -19,17 +19,16 @@ function highlightCells(
   const api = getWorkbookApi();
   if (!api) return;
   const color = "#d4f5f0";
-  const range = [{ row: [startRow, endRow], column: [startCol, endCol] }];
-  try {
-    api.setCellFormatByRange("bg", color, range);
-  } catch {
-    /* ignore */
+  for (let r = startRow; r <= endRow; r++) {
+    for (let c = startCol; c <= endCol; c++) {
+      try { api.setCellFormat(r, c, "bg", color); } catch { /* */ }
+    }
   }
   setTimeout(() => {
-    try {
-      api.setCellFormatByRange("bg", undefined, range);
-    } catch {
-      /* ignore */
+    for (let r = startRow; r <= endRow; r++) {
+      for (let c = startCol; c <= endCol; c++) {
+        try { api.setCellFormat(r, c, "bg", undefined); } catch { /* */ }
+      }
     }
   }, 1500);
 }
@@ -62,13 +61,31 @@ export function executeToolOnClient(toolName: string, args: Record<string, any>)
       case "write_range": {
         const { startRow, startCol, values } = args;
         if (!values || values.length === 0) break;
-        const endRow = startRow + values.length - 1;
-        const endCol =
-          startCol + Math.max(...values.map((r: unknown[]) => r.length)) - 1;
-        api.setCellValuesByRange(values, {
-          row: [startRow, endRow],
-          column: [startCol, endCol],
+        const maxCols = Math.max(...values.map((r: unknown[]) => r?.length ?? 0));
+        if (maxCols === 0) break;
+        // Pad rows to uniform length so setCellValuesByRange doesn't crash
+        const padded = values.map((r: unknown[]) => {
+          const row = Array.isArray(r) ? [...r] : [];
+          while (row.length < maxCols) row.push(null);
+          return row;
         });
+        const endRow = startRow + padded.length - 1;
+        const endCol = startCol + maxCols - 1;
+        try {
+          api.setCellValuesByRange(padded, {
+            row: [startRow, endRow],
+            column: [startCol, endCol],
+          });
+        } catch {
+          // Fallback: write cell by cell
+          for (let r = 0; r < padded.length; r++) {
+            for (let c = 0; c < padded[r].length; c++) {
+              if (padded[r][c] != null) {
+                api.setCellValue(startRow + r, startCol + c, padded[r][c]);
+              }
+            }
+          }
+        }
         highlightCells(startRow, startCol, endRow, endCol);
         break;
       }
@@ -79,15 +96,20 @@ export function executeToolOnClient(toolName: string, args: Record<string, any>)
       }
       case "format_cells": {
         const { startRow, startCol, endRow, endCol } = args;
-        const range = [
-          { row: [startRow, endRow], column: [startCol, endCol] },
-        ];
-        if (args.bold !== undefined)
-          api.setCellFormatByRange("bl", args.bold ? 1 : 0, range);
-        if (args.backgroundColor)
-          api.setCellFormatByRange("bg", args.backgroundColor, range);
-        if (args.textColor)
-          api.setCellFormatByRange("fc", args.textColor, range);
+        for (let r = startRow; r <= endRow; r++) {
+          for (let c = startCol; c <= endCol; c++) {
+            try {
+              if (args.bold !== undefined)
+                api.setCellFormat(r, c, "bl", args.bold ? 1 : 0);
+              if (args.backgroundColor)
+                api.setCellFormat(r, c, "bg", args.backgroundColor);
+              if (args.textColor)
+                api.setCellFormat(r, c, "fc", args.textColor);
+            } catch {
+              /* skip cells that don't exist yet */
+            }
+          }
+        }
         break;
       }
       case "insert_row": {

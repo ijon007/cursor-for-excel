@@ -32,18 +32,26 @@ function ResizeHandle({ onResize }: { onResize: (delta: number) => void }) {
   const onMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
+      e.stopPropagation();
       dragging.current = true;
       startX.current = e.clientX;
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+
       const onMove = (ev: MouseEvent) => {
         if (!dragging.current) return;
+        ev.preventDefault();
         const delta = startX.current - ev.clientX;
         startX.current = ev.clientX;
         onResize(delta);
       };
       const onUp = () => {
         dragging.current = false;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
         window.removeEventListener("mousemove", onMove);
         window.removeEventListener("mouseup", onUp);
+        window.dispatchEvent(new Event("resize"));
       };
       window.addEventListener("mousemove", onMove);
       window.addEventListener("mouseup", onUp);
@@ -54,10 +62,10 @@ function ResizeHandle({ onResize }: { onResize: (delta: number) => void }) {
   return (
     <div
       onMouseDown={onMouseDown}
-      className="w-1.5 shrink-0 cursor-col-resize hover:bg-primary/20 active:bg-primary/30 transition-colors relative group"
+      className="w-1.5 shrink-0 cursor-col-resize hover:bg-primary/20 active:bg-primary/30 transition-colors relative z-10"
+      style={{ touchAction: "none" }}
     >
-      <div className="absolute inset-y-0 -left-1 -right-1" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-0.5 h-8 rounded-full bg-border group-hover:bg-primary/40 transition-colors" />
+      <div className="absolute inset-y-0 -left-2 -right-2" />
     </div>
   );
 }
@@ -81,52 +89,25 @@ export default function AppShell() {
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">
-      {/* ─── Top toolbar ────────────────────────────── */}
-      <div
-        className="h-9 shrink-0 border-b border-border bg-card flex items-center justify-between px-3 gap-2"
-        data-print-hide
-      >
-        {/* Left: app identity */}
+      {/* Top toolbar */}
+      <div className="h-9 shrink-0 border-b border-border bg-card flex items-center justify-between px-3 gap-2" data-print-hide>
         <div className="flex items-center gap-2">
           <div className="size-5 rounded bg-primary flex items-center justify-center">
             <Sparkle weight="fill" className="size-3 text-primary-foreground" />
           </div>
           <span className="text-xs font-medium">Cursor for Excel</span>
         </div>
-
-        {/* Center: undo / redo */}
         <div className="flex items-center gap-0.5">
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={handleUndo}
-            title="Undo (Ctrl+Z)"
-          >
+          <Button variant="ghost" size="icon-xs" onClick={handleUndo} title="Undo">
             <ArrowCounterClockwise weight="bold" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={handleRedo}
-            title="Redo (Ctrl+Y)"
-          >
+          <Button variant="ghost" size="icon-xs" onClick={handleRedo} title="Redo">
             <ArrowClockwise weight="bold" />
           </Button>
         </div>
-
-        {/* Right: dark mode + sidebar toggle */}
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={toggleDarkMode}
-            title="Toggle dark mode"
-          >
-            {isDarkMode ? (
-              <Sun weight="bold" />
-            ) : (
-              <Moon weight="bold" />
-            )}
+          <Button variant="ghost" size="icon-xs" onClick={toggleDarkMode} title="Toggle dark mode">
+            {isDarkMode ? <Sun weight="bold" /> : <Moon weight="bold" />}
           </Button>
           <Button
             variant={isSidebarOpen ? "ghost" : "outline"}
@@ -139,19 +120,17 @@ export default function AppShell() {
         </div>
       </div>
 
-      {/* ─── Main content ───────────────────────────── */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Spreadsheet */}
+      {/* Main area — simple flex, no absolute positioning */}
+      <div className="flex flex-1 min-h-0">
         <div className="flex-1 min-w-0 h-full">
           <Spreadsheet />
         </div>
 
-        {/* Resize handle + Chat panel */}
         {isSidebarOpen && (
           <>
             <ResizeHandle onResize={handleResize} />
             <div
-              className="h-full border-l border-border shrink-0"
+              className="h-full shrink-0 border-l border-border bg-card"
               style={{ width: chatPanelWidth }}
             >
               <ChatPanel />
@@ -160,7 +139,6 @@ export default function AppShell() {
         )}
       </div>
 
-      {/* Chart expand modal */}
       <ChartModal />
     </div>
   );

@@ -27,23 +27,29 @@ RULES:
 6. When asked to create a chart, use the add_chart tool with actual numeric data (not formulas).
 7. For conditional formatting, use the conditional_format tool to color-code data ranges.
 
-STYLING — THIS IS CRITICAL. Every spreadsheet you generate MUST be professionally styled:
-- Set column widths generously (100-160px) so nothing is clipped.
-- Title row: bold, larger feel — use a strong background color (e.g. #1a237e, #0d47a1, #1b5e20, #4a148c, #b71c1c) with WHITE text (#ffffff). Merge cells across the full width for the title.
-- Column headers row: bold, medium background (e.g. #bbdefb, #c8e6c9, #e1bee7, #ffe0b2, #b3e5fc) with dark text.
-- Section headers (like "Income", "Expenses"): bold, light tinted background (e.g. #e3f2fd, #f1f8e9, #fce4ec) to separate sections visually.
-- Subtotal / total rows: bold, distinct background (e.g. #fff3e0, #e8f5e9, #e0f7fa) so they stand out.
-- Grand total / bottom line: bold, strong background similar to the title row with white text.
-- Data rows: keep background white/default for clean contrast. Use alternating light tint (#f5f5f5 for even rows) when you have more than 8 data rows.
-- Negative numbers: use red text color (#c62828).
-- Use the format_cells tool aggressively — good formatting is NOT optional. Every table MUST have styled headers, section separators, and totals.
+STYLING — THIS IS THE MOST IMPORTANT PART. You MUST style every spreadsheet like a polished financial report. Unstyled tables are UNACCEPTABLE. Follow this exact sequence after writing all data:
 
-Color palette reference (pick a consistent theme per table):
-  Blue theme:   title=#1565c0 headers=#bbdefb sections=#e3f2fd totals=#e1f5fe
-  Green theme:  title=#2e7d32 headers=#c8e6c9 sections=#f1f8e9 totals=#e8f5e9
-  Purple theme: title=#6a1b9a headers=#e1bee7 sections=#f3e5f5 totals=#ede7f6
-  Teal theme:   title=#00695c headers=#b2dfdb sections=#e0f2f1 totals=#e0f7fa
-  Orange theme: title=#e65100 headers=#ffe0b2 sections=#fff3e0 totals=#fff8e1
+STEP 1 — Column widths: Always call set_column_width first. Label columns 120-160px, data columns 100-120px.
+
+STEP 2 — Title row (row 0): Write the title, then ALWAYS format it with:
+  - format_cells: bold=true, backgroundColor with a DARK color, textColor="#ffffff"
+  - Use one of these dark title colors: #1565c0 (blue), #2e7d32 (green), #6a1b9a (purple), #00695c (teal), #e65100 (orange)
+  - Merge the title across all used columns with merge_cells.
+
+STEP 3 — Column headers row (usually row 1 or 2): format with bold=true and a MEDIUM background:
+  - Blue=#bbdefb  Green=#c8e6c9  Purple=#e1bee7  Teal=#b2dfdb  Orange=#ffe0b2
+
+STEP 4 — Section headers ("Revenue", "Expenses", etc.): format with bold=true and a LIGHT tint:
+  - Blue=#e3f2fd  Green=#f1f8e9  Purple=#f3e5f5  Teal=#e0f2f1  Orange=#fff3e0
+
+STEP 5 — Subtotal rows ("Total Revenue", "Total COGS"): format with bold=true and a distinct background:
+  - Blue=#e1f5fe  Green=#e8f5e9  Purple=#ede7f6  Teal=#e0f7fa  Orange=#fff8e1
+
+STEP 6 — Grand total / bottom-line row ("Net Income", "Total"): format with bold=true, DARK background + white text, same as the title color.
+
+STEP 7 — Key metric rows (like "Gross Profit"): format with bold=true and a highlight color like #fff9c4 (light yellow).
+
+Pick ONE color theme and use it consistently throughout. Make at LEAST 6-8 format_cells calls per table. If you only make 1-2 formatting calls, the result will look terrible — so be thorough.
 
 Column mapping: A=0, B=1, C=2, D=3, E=4, F=5, G=6, H=7, I=8, J=9, K=10, L=11, M=12
 
