@@ -14,12 +14,27 @@ const neutralGray: Theme["gray"] = {
   900: "#09090b",
 };
 
+/** Teal palette matching app primary (oklch hue 183). Selection uses primary/blue. */
+const primaryTeal: Theme["primary"] = {
+  50: "#f0fdfa",
+  100: "#ccfbf1",
+  200: "#99f6e4",
+  300: "#5eead4",
+  400: "#2dd4bf",
+  500: "#14b8a6",
+  600: "#0d9488",
+  700: "#0f766e",
+  800: "#115e59",
+  900: "#134e4a",
+};
+
 export const neutralTheme: Theme = {
   ...defaultTheme,
-  // Keep existing accent palette, but make neutrals more gray / less blue.
   white: "#ffffff",
   black: "#020617",
   gray: neutralGray,
+  primary: primaryTeal,
+  blue: primaryTeal,
 };
 
 

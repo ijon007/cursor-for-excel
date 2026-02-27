@@ -21,6 +21,8 @@ type UniverWorksheetLike = {
     numRows?: number,
     numColumns?: number
   ) => UniverRangeLike;
+  getRowCount?: () => number;
+  getColumnCount?: () => number;
   insertRowsBefore: (beforePosition: number, howMany: number) => void;
   insertColumnsBefore: (beforePosition: number, howMany: number) => void;
   setName: (name: string) => void;
@@ -60,6 +62,27 @@ function colLabel(c: number): string {
   return label;
 }
 
+function clampRange(
+  sheet: UniverWorksheetLike,
+  startRow: number,
+  startCol: number,
+  endRow: number,
+  endCol: number
+): { startRow: number; startCol: number; numRows: number; numCols: number } {
+  const maxRow = (sheet.getRowCount?.() ?? 1000) - 1;
+  const maxCol = (sheet.getColumnCount?.() ?? 26) - 1;
+  const sr = Math.max(0, Math.min(startRow, maxRow));
+  const sc = Math.max(0, Math.min(startCol, maxCol));
+  const er = Math.max(sr, Math.min(endRow, maxRow));
+  const ec = Math.max(sc, Math.min(endCol, maxCol));
+  return {
+    startRow: sr,
+    startCol: sc,
+    numRows: er - sr + 1,
+    numCols: ec - sc + 1,
+  };
+}
+
 function highlightCells(
   startRow: number,
   startCol: number,
@@ -69,9 +92,14 @@ function highlightCells(
   const sheet = getActiveSheet();
   if (!sheet) return;
   try {
-    const rows = endRow - startRow + 1;
-    const cols = endCol - startCol + 1;
-    sheet.getRange(startRow, startCol, rows, cols).activate?.();
+    const { startRow: sr, startCol: sc, numRows, numCols } = clampRange(
+      sheet,
+      startRow,
+      startCol,
+      endRow,
+      endCol
+    );
+    sheet.getRange(sr, sc, numRows, numCols).activate?.();
   } catch {
     // Ignore UI-only highlighting failures.
   }
@@ -113,25 +141,35 @@ export function executeToolOnClient(toolName: string, args: Record<string, any>)
           while (row.length < maxCols) row.push(null);
           return row;
         });
-        const endRow = startRow + padded.length - 1;
-        const endCol = startCol + maxCols - 1;
+        const wr = clampRange(
+          sheet,
+          startRow,
+          startCol,
+          startRow + padded.length - 1,
+          startCol + maxCols - 1
+        );
+        const sliced = padded.slice(0, wr.numRows).map((row: unknown[]) => {
+          const r = row.slice(0, wr.numCols);
+          while (r.length < wr.numCols) r.push(null);
+          return r;
+        });
         try {
           sheet
-            .getRange(startRow, startCol, padded.length, maxCols)
-            .setValues(padded);
+            .getRange(wr.startRow, wr.startCol, wr.numRows, wr.numCols)
+            .setValues(sliced);
         } catch {
           // Fallback: write cell by cell
-          for (let r = 0; r < padded.length; r++) {
-            for (let c = 0; c < padded[r].length; c++) {
-              if (padded[r][c] != null) {
+          for (let r = 0; r < sliced.length; r++) {
+            for (let c = 0; c < sliced[r].length; c++) {
+              if (sliced[r][c] != null) {
                 sheet
-                  .getRange(startRow + r, startCol + c)
-                  .setValue(padded[r][c]);
+                  .getRange(wr.startRow + r, wr.startCol + c)
+                  .setValue(sliced[r][c]);
               }
             }
           }
         }
-        highlightCells(startRow, startCol, endRow, endCol);
+        highlightCells(wr.startRow, wr.startCol, wr.startRow + wr.numRows - 1, wr.startCol + wr.numCols - 1);
         break;
       }
       case "set_formula": {
@@ -141,11 +179,12 @@ export function executeToolOnClient(toolName: string, args: Record<string, any>)
       }
       case "format_cells": {
         const { startRow, startCol, endRow, endCol } = args;
+        const fr = clampRange(sheet, startRow, startCol, endRow, endCol);
         const range = sheet.getRange(
-          startRow,
-          startCol,
-          endRow - startRow + 1,
-          endCol - startCol + 1
+          fr.startRow,
+          fr.startCol,
+          fr.numRows,
+          fr.numCols
         );
         if (args.bold !== undefined) {
           range.setFontWeight(args.bold ? "bold" : "normal");
@@ -177,14 +216,14 @@ export function executeToolOnClient(toolName: string, args: Record<string, any>)
         break;
       }
       case "clear_range": {
-        sheet
-          .getRange(
-            args.startRow,
-            args.startCol,
-            args.endRow - args.startRow + 1,
-            args.endCol - args.startCol + 1
-          )
-          .clear();
+        const cr = clampRange(
+          sheet,
+          args.startRow,
+          args.startCol,
+          args.endRow,
+          args.endCol
+        );
+        sheet.getRange(cr.startRow, cr.startCol, cr.numRows, cr.numCols).clear();
         break;
       }
       case "set_column_width": {
@@ -196,13 +235,15 @@ export function executeToolOnClient(toolName: string, args: Record<string, any>)
         break;
       }
       case "merge_cells": {
+        const mr = clampRange(
+          sheet,
+          args.startRow,
+          args.startCol,
+          args.endRow,
+          args.endCol
+        );
         sheet
-          .getRange(
-            args.startRow,
-            args.startCol,
-            args.endRow - args.startRow + 1,
-            args.endCol - args.startCol + 1
-          )
+          .getRange(mr.startRow, mr.startCol, mr.numRows, mr.numCols)
           .merge({ defaultMerge: true, isForceMerge: true });
         break;
       }
@@ -240,12 +281,21 @@ function readNumericCell(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function applyConditionalFormat(sheet: UniverWorksheetLike, args: any) {
   const { startRow, startCol, endRow, endCol, rule, threshold = 0, colorHigh = "#c8e6c9", colorLow = "#ffcdd2" } = args;
+  const { startRow: sr, startCol: sc, numRows, numCols } = clampRange(
+    sheet,
+    startRow,
+    startCol,
+    endRow,
+    endCol
+  );
+  const er = sr + numRows - 1;
+  const ec = sc + numCols - 1;
 
   let min = Infinity;
   let max = -Infinity;
   if (rule === "color_scale") {
-    for (let rr = startRow; rr <= endRow; rr++) {
-      for (let cc = startCol; cc <= endCol; cc++) {
+    for (let rr = sr; rr <= er; rr++) {
+      for (let cc = sc; cc <= ec; cc++) {
         const n = readNumericCell(sheet, rr, cc);
         if (n == null) continue;
         min = Math.min(min, n);
@@ -255,8 +305,8 @@ function applyConditionalFormat(sheet: UniverWorksheetLike, args: any) {
     if (!Number.isFinite(min) || !Number.isFinite(max) || min === max) return;
   }
 
-  for (let r = startRow; r <= endRow; r++) {
-    for (let c = startCol; c <= endCol; c++) {
+  for (let r = sr; r <= er; r++) {
+    for (let c = sc; c <= ec; c++) {
       try {
         const num = readNumericCell(sheet, r, c);
         if (num == null) continue;
