@@ -6,6 +6,7 @@ import { UniverSheetsCorePreset } from "@univerjs/preset-sheets-core";
 import UniverPresetSheetsCoreEnUS from "@univerjs/preset-sheets-core/locales/en-US";
 import "@univerjs/preset-sheets-core/lib/index.css";
 import { setWorkbookApi, useAppStore } from "@/lib/store";
+import { neutralTheme } from "@/lib/univer-theme";
 
 type UniverApiLike = {
   createWorkbook: (data: Record<string, unknown>) => void;
@@ -34,6 +35,7 @@ export default function Spreadsheet() {
       locales: {
         [LocaleType.EN_US]: mergeLocales(UniverPresetSheetsCoreEnUS),
       },
+      theme: neutralTheme,
       presets: [
         UniverSheetsCorePreset({
           container: containerRef.current,

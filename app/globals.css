@@ -132,6 +132,15 @@
   color: var(--foreground);
 }
 
+.dark .univer-sheet-container {
+  /* Make Univer chrome follow our neutral dark surfaces instead of blue. */
+  --univer-gray-900: var(--background);
+  --univer-gray-800: var(--card);
+  --univer-gray-700: var(--muted);
+  --univer-gray-600: var(--muted-foreground);
+  --univer-gray-500: var(--muted-foreground);
+}
+
 .fortune-sheet-container {
   position: relative;
 }
