@@ -125,7 +125,27 @@
   }
 }
 
-/* FortuneSheet integration */
+/* Spreadsheet integrations */
+.univer-sheet-container {
+  position: relative;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+.dark .univer-sheet-container {
+  /* Make Univer chrome follow our neutral dark surfaces instead of blue. */
+  --univer-gray-900: var(--background);
+  --univer-gray-800: var(--card);
+  --univer-gray-700: var(--muted);
+  --univer-gray-600: var(--muted-foreground);
+  --univer-gray-500: var(--muted-foreground);
+  --univer-primary-500: var(--primary);
+  --univer-primary-600: var(--primary);
+  --univer-primary-700: var(--primary);
+  --univer-blue-500: var(--primary);
+  --univer-blue-600: var(--primary);
+}
+
 .fortune-sheet-container {
   position: relative;
 }

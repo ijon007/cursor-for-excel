@@ -4,6 +4,33 @@ const MAX_TOKEN_ESTIMATE = 6000;
 const AVG_CHARS_PER_TOKEN = 4;
 const MAX_CHARS = MAX_TOKEN_ESTIMATE * AVG_CHARS_PER_TOKEN;
 
+type UniverRangeLike = {
+  getValues: () => (string | number | boolean | null)[][];
+  getFormulas: () => string[][];
+  getValue: () => string | number | boolean | null;
+  getFormula: () => string;
+};
+
+type UniverWorksheetLike = {
+  getSheetName: () => string;
+  getLastRow: () => number;
+  getLastColumn: () => number;
+  getRange: (
+    row: number,
+    col: number,
+    numRows?: number,
+    numCols?: number
+  ) => UniverRangeLike;
+};
+
+type UniverWorkbookLike = {
+  getSheets: () => UniverWorksheetLike[];
+};
+
+type UniverApiLike = {
+  getActiveWorkbook?: () => UniverWorkbookLike | null;
+};
+
 function colLabel(c: number): string {
   let label = "";
   let n = c;
@@ -15,11 +42,12 @@ function colLabel(c: number): string {
 }
 
 export function serializeSheetToString(): string {
-  const api = getWorkbookApi();
-  if (!api) return "Empty spreadsheet.";
+  const api = getWorkbookApi() as UniverApiLike | null;
+  const workbook = api?.getActiveWorkbook?.();
+  if (!workbook) return "Empty spreadsheet.";
 
   try {
-    const allSheets = api.getAllSheets();
+    const allSheets = workbook.getSheets();
     if (!allSheets || allSheets.length === 0) return "Empty spreadsheet.";
 
     const lines: string[] = [];
@@ -27,48 +55,44 @@ export function serializeSheetToString(): string {
 
     for (let si = 0; si < allSheets.length; si++) {
       const sheet = allSheets[si];
-      const celldata = sheet.celldata || [];
+      const sheetName = sheet.getSheetName?.() || `Sheet${si + 1}`;
+      const lastRow = sheet.getLastRow();
+      const lastCol = sheet.getLastColumn();
 
-      if (celldata.length === 0) {
-        lines.push(`Sheet "${sheet.name || `Sheet${si + 1}`}": empty`);
+      if (lastRow < 0 || lastCol < 0) {
+        lines.push(`Sheet "${sheetName}": empty`);
         continue;
       }
 
-      let maxRow = 0;
-      let maxCol = 0;
-      for (const cd of celldata) {
-        if (cd.r > maxRow) maxRow = cd.r;
-        if (cd.c > maxCol) maxCol = cd.c;
+      const firstCell = sheet.getRange(0, 0);
+      const isSingleEmptyCell =
+        lastRow === 0 &&
+        lastCol === 0 &&
+        firstCell.getValue() == null &&
+        !firstCell.getFormula();
+      if (isSingleEmptyCell) {
+        lines.push(`Sheet "${sheetName}": empty`);
+        continue;
       }
+
+      const maxRow = Math.max(lastRow, 0);
+      const maxCol = Math.max(lastCol, 0);
+      const range = sheet.getRange(0, 0, maxRow + 1, maxCol + 1);
+      const values = range.getValues();
+      const formulas = range.getFormulas();
 
       lines.push(
-        `Sheet "${sheet.name || `Sheet${si + 1}`}" (${maxRow + 1} rows × ${maxCol + 1} cols):`
+        `Sheet "${sheetName}" (${maxRow + 1} rows × ${maxCol + 1} cols):`
       );
-
-      // Build a sparse map for efficient lookup
-      const cellMap = new Map<string, string>();
-      for (const cd of celldata) {
-        if (!cd.v && cd.v !== 0) continue;
-        const val =
-          typeof cd.v === "object" && cd.v !== null
-            ? cd.v.f
-              ? cd.v.f
-              : cd.v.v !== undefined && cd.v.v !== null
-                ? String(cd.v.v)
-                : cd.v.m !== undefined
-                  ? String(cd.v.m)
-                  : ""
-            : String(cd.v);
-        if (val === "") continue;
-        cellMap.set(`${cd.r},${cd.c}`, val);
-      }
 
       // Output as compact CSV-like rows (only rows that have data)
       for (let r = 0; r <= Math.min(maxRow, 200); r++) {
         const cells: string[] = [];
         let hasData = false;
         for (let c = 0; c <= maxCol; c++) {
-          const v = cellMap.get(`${r},${c}`) || "";
+          const formula = formulas[r]?.[c];
+          const rawValue = values[r]?.[c];
+          const v = formula || (rawValue == null ? "" : String(rawValue));
           cells.push(v);
           if (v) hasData = true;
         }

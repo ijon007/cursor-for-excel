@@ -1,82 +1,73 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
-import { Workbook } from "@fortune-sheet/react";
-import "@fortune-sheet/react/dist/index.css";
+import { useEffect, useRef } from "react";
+import { createUniver, LocaleType, mergeLocales } from "@univerjs/presets";
+import { UniverSheetsCorePreset } from "@univerjs/preset-sheets-core";
+import UniverPresetSheetsCoreEnUS from "@univerjs/preset-sheets-core/locales/en-US";
+import "@univerjs/preset-sheets-core/lib/index.css";
 import { setWorkbookApi, useAppStore } from "@/lib/store";
-import type { Sheet } from "@fortune-sheet/core";
+import { neutralTheme } from "@/lib/univer-theme";
 
-const defaultSheetData: Sheet[] = [
-  {
-    name: "Sheet1",
-    id: "sheet_01",
-    order: 0,
-    status: 1,
-    celldata: [],
-    row: 84,
-    column: 60,
-    config: {},
-  },
-];
+type UniverApiLike = {
+  createWorkbook: (data: Record<string, unknown>) => void;
+  getActiveWorkbook: () => {
+    getActiveSheet: () => {
+      setRowCount: (rows: number) => void;
+      setColumnCount: (cols: number) => void;
+    } | null;
+  } | null;
+  toggleDarkMode: (enabled: boolean) => void;
+  dispose: () => void;
+};
 
 export default function Spreadsheet() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const workbookRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const univerApiRef = useRef<UniverApiLike | null>(null);
   const isSidebarOpen = useAppStore((s) => s.isSidebarOpen);
   const chatPanelWidth = useAppStore((s) => s.chatPanelWidth);
+  const isDarkMode = useAppStore((s) => s.isDarkMode);
 
   useEffect(() => {
-    if (workbookRef.current) {
-      setWorkbookApi(workbookRef.current);
-    }
+    if (!containerRef.current) return;
+
+    const { univerAPI } = createUniver({
+      locale: LocaleType.EN_US,
+      locales: {
+        [LocaleType.EN_US]: mergeLocales(UniverPresetSheetsCoreEnUS),
+      },
+      theme: neutralTheme,
+      presets: [
+        UniverSheetsCorePreset({
+          container: containerRef.current,
+        }),
+      ],
+    });
+
+    univerAPI.createWorkbook({});
+    const activeSheet = univerAPI.getActiveWorkbook()?.getActiveSheet();
+    activeSheet?.setRowCount(200);
+    activeSheet?.setColumnCount(60);
+    univerAPI.toggleDarkMode(useAppStore.getState().isDarkMode);
+
+    univerApiRef.current = univerAPI;
+    setWorkbookApi(univerAPI);
+
     return () => {
+      univerApiRef.current = null;
       setWorkbookApi(null);
+      univerAPI.dispose();
     };
   }, []);
 
-  // Tell FortuneSheet to recalculate size when the container resizes
+  useEffect(() => {
+    univerApiRef.current?.toggleDarkMode(isDarkMode);
+  }, [isDarkMode]);
+
+  // Trigger layout recalculation when chat panel size changes.
   useEffect(() => {
     const t = setTimeout(() => window.dispatchEvent(new Event("resize")), 60);
     return () => clearTimeout(t);
   }, [isSidebarOpen, chatPanelWidth]);
 
-  // Shift+Scroll: convert vertical wheel to horizontal scroll
-  const handleWheel = useCallback((e: WheelEvent) => {
-    if (e.shiftKey && e.deltaY !== 0) {
-      const scrollbarX = containerRef.current?.querySelector(
-        ".luckysheet-scrollbar-x"
-      ) as HTMLDivElement | null;
-      if (scrollbarX) {
-        e.preventDefault();
-        e.stopPropagation();
-        scrollbarX.scrollLeft += e.deltaY;
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    el.addEventListener("wheel", handleWheel, { capture: true });
-    return () => el.removeEventListener("wheel", handleWheel, { capture: true });
-  }, [handleWheel]);
-
-  const handleChange = useCallback(() => {}, []);
-
-  return (
-    <div ref={containerRef} className="fortune-sheet-container w-full h-full">
-      <Workbook
-        ref={workbookRef}
-        data={defaultSheetData}
-        onChange={handleChange}
-        showToolbar={true}
-        showFormulaBar={true}
-        showSheetTabs={true}
-        allowEdit={true}
-        column={60}
-        row={84}
-      />
-    </div>
-  );
+  return <div ref={containerRef} className="univer-sheet-container h-full w-full" />;
 }

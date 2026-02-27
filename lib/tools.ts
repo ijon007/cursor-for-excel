@@ -1,5 +1,57 @@
 import { getWorkbookApi, useAppStore } from "./store";
 
+type UniverRangeLike = {
+  setValue: (value: unknown) => void;
+  setValues: (values: unknown[][]) => void;
+  setFormula: (formula: string) => void;
+  setFontWeight: (fontWeight: "bold" | "normal" | null) => void;
+  setBackgroundColor: (color: string) => void;
+  setFontColor: (color: string | null) => void;
+  merge: (options?: { defaultMerge?: boolean; isForceMerge?: boolean }) => void;
+  clear: () => void;
+  getValue: () => unknown;
+  activate?: () => void;
+  activateAsCurrentCell?: () => void;
+};
+
+type UniverWorksheetLike = {
+  getRange: (
+    row: number,
+    column: number,
+    numRows?: number,
+    numColumns?: number
+  ) => UniverRangeLike;
+  getRowCount?: () => number;
+  getColumnCount?: () => number;
+  insertRowsBefore: (beforePosition: number, howMany: number) => void;
+  insertColumnsBefore: (beforePosition: number, howMany: number) => void;
+  setName: (name: string) => void;
+  setColumnWidth: (columnPosition: number, width: number) => void;
+  setFrozenRows: (rows: number) => void;
+  setFrozenColumns: (columns: number) => void;
+  activate?: () => void;
+};
+
+type UniverWorkbookLike = {
+  getActiveSheet: () => UniverWorksheetLike;
+  insertSheet: (sheetName?: string) => UniverWorksheetLike;
+  undo: () => void;
+  redo: () => void;
+};
+
+type UniverApiLike = {
+  getActiveWorkbook?: () => UniverWorkbookLike | null;
+};
+
+function getActiveWorkbook(): UniverWorkbookLike | null {
+  const api = getWorkbookApi() as UniverApiLike | null;
+  return api?.getActiveWorkbook?.() ?? null;
+}
+
+function getActiveSheet(): UniverWorksheetLike | null {
+  return getActiveWorkbook()?.getActiveSheet() ?? null;
+}
+
 function colLabel(c: number): string {
   let label = "";
   let n = c;
@@ -10,37 +62,56 @@ function colLabel(c: number): string {
   return label;
 }
 
+function clampRange(
+  sheet: UniverWorksheetLike,
+  startRow: number,
+  startCol: number,
+  endRow: number,
+  endCol: number
+): { startRow: number; startCol: number; numRows: number; numCols: number } {
+  const maxRow = (sheet.getRowCount?.() ?? 1000) - 1;
+  const maxCol = (sheet.getColumnCount?.() ?? 26) - 1;
+  const sr = Math.max(0, Math.min(startRow, maxRow));
+  const sc = Math.max(0, Math.min(startCol, maxCol));
+  const er = Math.max(sr, Math.min(endRow, maxRow));
+  const ec = Math.max(sc, Math.min(endCol, maxCol));
+  return {
+    startRow: sr,
+    startCol: sc,
+    numRows: er - sr + 1,
+    numCols: ec - sc + 1,
+  };
+}
+
 function highlightCells(
   startRow: number,
   startCol: number,
   endRow: number,
   endCol: number
 ) {
-  const api = getWorkbookApi();
-  if (!api) return;
-  const color = "#d4f5f0";
-  for (let r = startRow; r <= endRow; r++) {
-    for (let c = startCol; c <= endCol; c++) {
-      try { api.setCellFormat(r, c, "bg", color); } catch { /* */ }
-    }
+  const sheet = getActiveSheet();
+  if (!sheet) return;
+  try {
+    const { startRow: sr, startCol: sc, numRows, numCols } = clampRange(
+      sheet,
+      startRow,
+      startCol,
+      endRow,
+      endCol
+    );
+    sheet.getRange(sr, sc, numRows, numCols).activate?.();
+  } catch {
+    // Ignore UI-only highlighting failures.
   }
-  setTimeout(() => {
-    for (let r = startRow; r <= endRow; r++) {
-      for (let c = startCol; c <= endCol; c++) {
-        try { api.setCellFormat(r, c, "bg", undefined); } catch { /* */ }
-      }
-    }
-  }, 1500);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function executeToolOnClient(toolName: string, args: Record<string, any>) {
-  const api = getWorkbookApi();
-
+export function executeToolOnClient(toolName: string, args: Record<string, any>, output?: Record<string, any>) {
   // Chart tool doesn't need the spreadsheet API
   if (toolName === "add_chart") {
+    const chartId = output?.chartId ?? args.chartId ?? Math.random().toString(36).slice(2, 10);
     useAppStore.getState().addChart({
-      id: args.chartId || Math.random().toString(36).slice(2, 10),
+      id: chartId,
       type: args.type,
       title: args.title,
       xLabels: args.xLabels,
@@ -49,12 +120,14 @@ export function executeToolOnClient(toolName: string, args: Record<string, any>)
     return;
   }
 
-  if (!api) return;
+  const workbook = getActiveWorkbook();
+  const sheet = workbook?.getActiveSheet();
+  if (!sheet || !workbook) return;
 
   try {
     switch (toolName) {
       case "write_cell": {
-        api.setCellValue(args.row, args.col, args.value);
+        sheet.getRange(args.row, args.col).setValue(args.value);
         highlightCells(args.row, args.col, args.row, args.col);
         break;
       }
@@ -69,98 +142,123 @@ export function executeToolOnClient(toolName: string, args: Record<string, any>)
           while (row.length < maxCols) row.push(null);
           return row;
         });
-        const endRow = startRow + padded.length - 1;
-        const endCol = startCol + maxCols - 1;
+        const wr = clampRange(
+          sheet,
+          startRow,
+          startCol,
+          startRow + padded.length - 1,
+          startCol + maxCols - 1
+        );
+        const sliced = padded.slice(0, wr.numRows).map((row: unknown[]) => {
+          const r = row.slice(0, wr.numCols);
+          while (r.length < wr.numCols) r.push(null);
+          return r;
+        });
         try {
-          api.setCellValuesByRange(padded, {
-            row: [startRow, endRow],
-            column: [startCol, endCol],
-          });
+          sheet
+            .getRange(wr.startRow, wr.startCol, wr.numRows, wr.numCols)
+            .setValues(sliced);
         } catch {
           // Fallback: write cell by cell
-          for (let r = 0; r < padded.length; r++) {
-            for (let c = 0; c < padded[r].length; c++) {
-              if (padded[r][c] != null) {
-                api.setCellValue(startRow + r, startCol + c, padded[r][c]);
+          for (let r = 0; r < sliced.length; r++) {
+            for (let c = 0; c < sliced[r].length; c++) {
+              if (sliced[r][c] != null) {
+                sheet
+                  .getRange(wr.startRow + r, wr.startCol + c)
+                  .setValue(sliced[r][c]);
               }
             }
           }
         }
-        highlightCells(startRow, startCol, endRow, endCol);
+        highlightCells(wr.startRow, wr.startCol, wr.startRow + wr.numRows - 1, wr.startCol + wr.numCols - 1);
         break;
       }
       case "set_formula": {
-        api.setCellValue(args.row, args.col, args.formula);
+        sheet.getRange(args.row, args.col).setFormula(args.formula);
         highlightCells(args.row, args.col, args.row, args.col);
         break;
       }
       case "format_cells": {
         const { startRow, startCol, endRow, endCol } = args;
-        for (let r = startRow; r <= endRow; r++) {
-          for (let c = startCol; c <= endCol; c++) {
-            try {
-              if (args.bold !== undefined)
-                api.setCellFormat(r, c, "bl", args.bold ? 1 : 0);
-              if (args.backgroundColor)
-                api.setCellFormat(r, c, "bg", args.backgroundColor);
-              if (args.textColor)
-                api.setCellFormat(r, c, "fc", args.textColor);
-            } catch {
-              /* skip cells that don't exist yet */
-            }
-          }
+        const fr = clampRange(sheet, startRow, startCol, endRow, endCol);
+        const range = sheet.getRange(
+          fr.startRow,
+          fr.startCol,
+          fr.numRows,
+          fr.numCols
+        );
+        if (args.bold !== undefined) {
+          range.setFontWeight(args.bold ? "bold" : "normal");
+        }
+        if (args.backgroundColor) {
+          range.setBackgroundColor(args.backgroundColor);
+        }
+        if (args.textColor) {
+          range.setFontColor(args.textColor);
         }
         break;
       }
       case "insert_row": {
-        api.insertRowOrColumn("row", args.index, args.count ?? 1);
+        sheet.insertRowsBefore(args.index, args.count ?? 1);
         break;
       }
       case "insert_column": {
-        api.insertRowOrColumn("column", args.index, args.count ?? 1);
+        sheet.insertColumnsBefore(args.index, args.count ?? 1);
         break;
       }
       case "add_sheet": {
-        api.addSheet();
-        if (args.name) {
-          setTimeout(() => {
-            try { api.setSheetName(args.name); } catch { /* */ }
-          }, 150);
-        }
+        const newSheet = workbook.insertSheet(args.name);
+        if (args.name) newSheet.setName(args.name);
+        newSheet.activate?.();
         break;
       }
       case "rename_sheet": {
-        api.setSheetName(args.name);
+        sheet.setName(args.name);
         break;
       }
       case "clear_range": {
-        for (let r = args.startRow; r <= args.endRow; r++) {
-          for (let c = args.startCol; c <= args.endCol; c++) {
-            api.clearCell(r, c);
-          }
-        }
+        const cr = clampRange(
+          sheet,
+          args.startRow,
+          args.startCol,
+          args.endRow,
+          args.endCol
+        );
+        sheet.getRange(cr.startRow, cr.startCol, cr.numRows, cr.numCols).clear();
         break;
       }
       case "set_column_width": {
-        api.setColumnWidth(args.columns);
+        for (const [col, width] of Object.entries(args.columns ?? {})) {
+          const columnIndex = Number(col);
+          if (!Number.isFinite(columnIndex)) continue;
+          sheet.setColumnWidth(columnIndex, Number(width));
+        }
         break;
       }
       case "merge_cells": {
-        api.mergeCells(
-          [{ row: [args.startRow, args.endRow], column: [args.startCol, args.endCol] }],
-          "merge-all"
+        const mr = clampRange(
+          sheet,
+          args.startRow,
+          args.startCol,
+          args.endRow,
+          args.endCol
         );
+        sheet
+          .getRange(mr.startRow, mr.startCol, mr.numRows, mr.numCols)
+          .merge({ defaultMerge: true, isForceMerge: true });
         break;
       }
       case "freeze_panes": {
-        api.freeze(args.type, {
-          row: args.row ?? 0,
-          column: args.column ?? 0,
-        });
+        if (args.type === "row" || args.type === "both") {
+          sheet.setFrozenRows((args.row ?? 0) + 1);
+        }
+        if (args.type === "column" || args.type === "both") {
+          sheet.setFrozenColumns((args.column ?? 0) + 1);
+        }
         break;
       }
       case "conditional_format": {
-        applyConditionalFormat(api, args);
+        applyConditionalFormat(sheet, args);
         break;
       }
     }
@@ -169,16 +267,50 @@ export function executeToolOnClient(toolName: string, args: Record<string, any>)
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function applyConditionalFormat(api: any, args: any) {
-  const { startRow, startCol, endRow, endCol, rule, threshold = 0, colorHigh = "#c8e6c9", colorLow = "#ffcdd2" } = args;
+function readNumericCell(
+  sheet: UniverWorksheetLike,
+  row: number,
+  col: number
+): number | null {
+  const raw = sheet.getRange(row, col).getValue();
+  if (typeof raw === "number") return Number.isFinite(raw) ? raw : null;
+  if (raw === null || raw === undefined || raw === "") return null;
+  const parsed = Number.parseFloat(String(raw).replaceAll(",", ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
 
-  for (let r = startRow; r <= endRow; r++) {
-    for (let c = startCol; c <= endCol; c++) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function applyConditionalFormat(sheet: UniverWorksheetLike, args: any) {
+  const { startRow, startCol, endRow, endCol, rule, threshold = 0, colorHigh = "#c8e6c9", colorLow = "#ffcdd2" } = args;
+  const { startRow: sr, startCol: sc, numRows, numCols } = clampRange(
+    sheet,
+    startRow,
+    startCol,
+    endRow,
+    endCol
+  );
+  const er = sr + numRows - 1;
+  const ec = sc + numCols - 1;
+
+  let min = Infinity;
+  let max = -Infinity;
+  if (rule === "color_scale") {
+    for (let rr = sr; rr <= er; rr++) {
+      for (let cc = sc; cc <= ec; cc++) {
+        const n = readNumericCell(sheet, rr, cc);
+        if (n == null) continue;
+        min = Math.min(min, n);
+        max = Math.max(max, n);
+      }
+    }
+    if (!Number.isFinite(min) || !Number.isFinite(max) || min === max) return;
+  }
+
+  for (let r = sr; r <= er; r++) {
+    for (let c = sc; c <= ec; c++) {
       try {
-        const raw = api.getCellValue(r, c, { type: "v" });
-        const num = typeof raw === "number" ? raw : parseFloat(raw);
-        if (isNaN(num)) continue;
+        const num = readNumericCell(sheet, r, c);
+        if (num == null) continue;
 
         let bg: string | undefined;
         switch (rule) {
@@ -192,22 +324,12 @@ function applyConditionalFormat(api: any, args: any) {
             bg = num < 0 ? colorLow : num > 0 ? colorHigh : undefined;
             break;
           case "color_scale": {
-            // Collect all values in range to find min/max
-            let min = Infinity, max = -Infinity;
-            for (let rr = startRow; rr <= endRow; rr++) {
-              for (let cc = startCol; cc <= endCol; cc++) {
-                const v = api.getCellValue(rr, cc, { type: "v" });
-                const n = typeof v === "number" ? v : parseFloat(v);
-                if (!isNaN(n)) { min = Math.min(min, n); max = Math.max(max, n); }
-              }
-            }
-            if (min === max) break;
             const pct = (num - min) / (max - min);
             bg = pct > 0.5 ? colorHigh : colorLow;
             break;
           }
         }
-        if (bg) api.setCellFormat(r, c, "bg", bg);
+        if (bg) sheet.getRange(r, c).setBackgroundColor(bg);
       } catch { /* ignore individual cell errors */ }
     }
   }
@@ -255,18 +377,16 @@ export function getToolDescription(toolName: string, args: Record<string, any>):
 }
 
 export function handleUndo() {
-  const api = getWorkbookApi();
-  if (api) api.handleUndo();
+  getActiveWorkbook()?.undo();
 }
 
 export function handleRedo() {
-  const api = getWorkbookApi();
-  if (api) api.handleRedo();
+  getActiveWorkbook()?.redo();
 }
 
 export function selectCell(cellRef: string) {
-  const api = getWorkbookApi();
-  if (!api) return;
+  const sheet = getActiveSheet();
+  if (!sheet) return;
   const match = cellRef.match(/^([A-Z]+)(\d+)$/);
   if (!match) return;
   const colStr = match[1];
@@ -277,7 +397,8 @@ export function selectCell(cellRef: string) {
   }
   col -= 1;
   try {
-    api.setSelection([{ row: [row, row], column: [col, col] }]);
-    api.scroll({ targetRow: row, targetColumn: col });
+    const range = sheet.getRange(row, col);
+    range.activateAsCurrentCell?.();
+    range.activate?.();
   } catch { /* ignore */ }
 }

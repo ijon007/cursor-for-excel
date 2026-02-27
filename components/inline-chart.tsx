@@ -135,10 +135,9 @@ export default function InlineChart({ data }: { data: ChartData }) {
           <button
             onClick={handleExpand}
             title="Expand chart"
-            className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 hover:bg-primary/20 text-primary text-[0.5625rem] font-medium transition-colors"
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 hover:bg-primary/20 text-primary text-[0.5625rem] font-medium transition-colors cursor-pointer"
           >
             <ArrowsOut weight="bold" className="size-3" />
-            Expand
           </button>
         )}
       </div>
