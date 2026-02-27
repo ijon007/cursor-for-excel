@@ -29,6 +29,9 @@ import {
   FileText,
   Scales,
   Printer,
+  Barbell,
+  CookingPot,
+  MapTrifold,
 } from "@phosphor-icons/react";
 import { useAppStore } from "@/lib/store";
 import { executeToolOnClient, getToolDescription } from "@/lib/tools";
@@ -65,6 +68,9 @@ const TEMPLATES = [
   { label: "Headcount Plan", prompt: "Build a headcount plan with departments, roles, salaries, start dates, and monthly/annual cost projections.", icon: Users },
   { label: "Pricing Model", prompt: "Create a SaaS pricing calculator with tiers, user counts, feature comparison, and revenue projections.", icon: Buildings },
   { label: "Unit Economics", prompt: "Build a unit economics model with CAC, LTV, payback period, churn rate, and margins.", icon: Lightning },
+  { label: "Workout Routine", prompt: "Create a workout routine table with exercises, sets, reps, rest time, and notes for a weekly training plan.", icon: Barbell },
+  { label: "Recipe List", prompt: "Build a recipe list with ingredients, quantities, units, and instructions. Include a shopping list section.", icon: CookingPot },
+  { label: "Travel Planner", prompt: "Create a travel planner with destinations, dates, accommodations, activities, and budget per day.", icon: MapTrifold },
 ];
 
 const FOLLOW_UP_SUGGESTIONS = [
