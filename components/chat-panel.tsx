@@ -234,13 +234,15 @@ export default function ChatPanel() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const toolCallId = (part as any).toolCallId;
         if (!toolCallId || executedToolCalls.current.has(toolCallId)) continue;
-        if (
+        const canExecute =
           info.state === "input-available" ||
           info.state === "output-available" ||
           info.state === "result" ||
-          info.state === "call"
-        ) {
-          executeToolOnClient(info.toolName, info.args ?? {});
+          info.state === "call";
+        const hasChartOutput = info.toolName === "add_chart" && info.output;
+        if (canExecute && (info.toolName !== "add_chart" || hasChartOutput)) {
+          const output = info.toolName === "add_chart" && info.output ? info.output : undefined;
+          executeToolOnClient(info.toolName, info.args ?? {}, output);
           executedToolCalls.current.add(toolCallId);
         }
       }

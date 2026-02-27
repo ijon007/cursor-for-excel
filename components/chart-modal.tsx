@@ -1,6 +1,5 @@
 "use client";
 
-import { X } from "@phosphor-icons/react";
 import {
   BarChart,
   Bar,
@@ -19,7 +18,12 @@ import {
   Legend,
 } from "recharts";
 import { useAppStore, type ChartConfig } from "@/lib/store";
-import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const COLORS = [
   "oklch(0.60 0.10 185)",
@@ -119,37 +123,25 @@ function ExpandedChart({ chart }: { chart: ChartConfig }) {
 
 export default function ChartModal() {
   const { expandedChartId, setExpandedChart, charts } = useAppStore();
-
-  if (!expandedChartId) return null;
-
+  const open = !!expandedChartId;
   const chart = charts.find((c) => c.id === expandedChartId);
-  if (!chart) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
-      onClick={() => setExpandedChart(null)}
+    <Dialog
+      open={open}
+      onOpenChange={(next) => !next && setExpandedChart(null)}
     >
-      <div
-        className="bg-card border border-border rounded-xl shadow-2xl w-[90vw] max-w-[900px] h-[70vh] max-h-[560px] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
+      <DialogContent
+        className="sm:max-w-[900px] w-[90vw] h-[70vh] max-h-[560px] flex flex-col p-0 gap-0"
+        showCloseButton={true}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-border">
-          <h2 className="text-sm font-medium">{chart.title}</h2>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => setExpandedChart(null)}
-          >
-            <X weight="bold" />
-          </Button>
-        </div>
-        {/* Chart area */}
+        <DialogHeader className="px-5 py-3 border-b border-border shrink-0">
+          <DialogTitle>{chart?.title ?? ""}</DialogTitle>
+        </DialogHeader>
         <div className="flex-1 p-5 min-h-0">
-          <ExpandedChart chart={chart} />
+          {chart && <ExpandedChart chart={chart} />}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

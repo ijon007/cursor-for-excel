@@ -106,11 +106,12 @@ function highlightCells(
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function executeToolOnClient(toolName: string, args: Record<string, any>) {
+export function executeToolOnClient(toolName: string, args: Record<string, any>, output?: Record<string, any>) {
   // Chart tool doesn't need the spreadsheet API
   if (toolName === "add_chart") {
+    const chartId = output?.chartId ?? args.chartId ?? Math.random().toString(36).slice(2, 10);
     useAppStore.getState().addChart({
-      id: args.chartId || Math.random().toString(36).slice(2, 10),
+      id: chartId,
       type: args.type,
       title: args.title,
       xLabels: args.xLabels,

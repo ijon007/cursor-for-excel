@@ -104,14 +104,6 @@ export default function AppShell() {
           <span className="text-xs font-medium">Cursor for Excel</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="flex items-center gap-0.5">
-            <Button variant="ghost" size="icon-xs" onClick={handleUndo} title="Undo">
-              <ArrowCounterClockwise weight="bold" />
-            </Button>
-            <Button variant="ghost" size="icon-xs" onClick={handleRedo} title="Redo">
-              <ArrowClockwise weight="bold" />
-            </Button>
-          </div>
           <Button variant="ghost" size="icon-xs" onClick={toggleDarkMode} title="Toggle dark mode">
             {isDarkMode ? <Sun weight="bold" /> : <Moon weight="bold" />}
           </Button>
